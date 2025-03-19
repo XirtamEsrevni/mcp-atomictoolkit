@@ -1,0 +1,14 @@
+[project]
+name = "mcp-atomictoolkit"
+version = "0.1.0-dev"
+description = "MCP server for ASE and more."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "ase>=3.24.0",
+    "fastmcp>=0.4.1",
+    "mcp[cli]>=1.4.1",
+    "orb-models>=0.4.2",
+    "pymatgen>=2025.3.10",
+    "pynanoflann>=0.10.0",
+]
