@@ -1,4 +1,4 @@
-"""Structure optimization using MLIPs (Orb and MACE)."""
+"""Structure optimization using MLIPs (Orb and Nequix)."""
 
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -6,8 +6,11 @@ import numpy as np
 from ase import Atoms
 from ase.constraints import FixAtoms, FixBondLength, FixBondLengths
 from ase.optimize import BFGS
+from nequix.calculator import NequixCalculator
 from orb_models.forcefield import pretrained
 from orb_models.forcefield.calculator import ORBCalculator
+
+NEQUIX_DEFAULT_MODEL = "nequix-mp-1"
 
 
 def get_orb_calculator() -> ORBCalculator:
@@ -17,10 +20,24 @@ def get_orb_calculator() -> ORBCalculator:
     return calculator
 
 
-def get_calculator(calculator_name: str) -> ORBCalculator:
+def get_nequix_calculator(
+    model_name: str = NEQUIX_DEFAULT_MODEL,
+    backend: str = "jax",
+) -> NequixCalculator:
+    """Initialize Nequix calculator on CPU."""
+    return NequixCalculator(
+        model_name,
+        backend=backend,
+    )
+
+
+def get_calculator(calculator_name: str) -> ORBCalculator | NequixCalculator:
     """Return an ASE calculator for the requested MLIP."""
-    if calculator_name.lower() == "orb":
+    calculator_key = calculator_name.lower()
+    if calculator_key == "orb":
         return get_orb_calculator()
+    if calculator_key == "nequix":
+        return get_nequix_calculator()
     raise ValueError(f"Unknown MLIP type: {calculator_name}")
 
 
@@ -65,7 +82,7 @@ def apply_constraints(atoms: Atoms, constraints: Optional[Dict[str, Any]]) -> No
 
 def optimize_structure(
     structure: Atoms,
-    calculator_name: str = "orb",
+    calculator_name: str = "nequix",
     max_steps: int = 50,
     fmax: float = 0.1,
     constraints: Optional[Dict[str, Any]] = None,
@@ -75,7 +92,7 @@ def optimize_structure(
 
     Args:
         structure: Input structure
-        calculator_name: Type of MLIP ('orb' or 'mace')
+        calculator_name: Type of MLIP ('nequix' or 'orb')
         max_steps: Maximum optimization steps
         fmax: Force convergence criterion
         constraints: Constraint settings (fixed atoms/cell/bonds)

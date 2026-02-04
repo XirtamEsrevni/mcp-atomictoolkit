@@ -114,7 +114,7 @@ async def optimize_structure_workflow(
     input_format: Optional[str] = None,
     output_filepath: str = "optimized.xyz",
     output_format: Optional[str] = None,
-    calculator_name: str = "orb",
+    calculator_name: str = "nequix",
     max_steps: int = 50,
     fmax: float = 0.1,
     constraints: Optional[Dict] = None,
@@ -126,7 +126,7 @@ async def optimize_structure_workflow(
         input_format: File format (optional)
         output_filepath: Output file path
         output_format: Output file format (optional)
-        calculator_name: Type of MLIP ('orb' or 'mace')
+        calculator_name: Type of MLIP ('nequix' or 'orb')
         max_steps: Maximum optimization steps
         fmax: Force convergence criterion
         constraints: Constraint settings (fixed atoms/cell/bonds)
@@ -154,6 +154,7 @@ async def run_md_workflow(
     output_format: Optional[str] = None,
     log_filepath: str = "md.log",
     summary_filepath: str = "md_summary.txt",
+    calculator_name: str = "nequix",
     integrator: str = "velocityverlet",
     timestep_fs: float = 1.0,
     temperature_K: float = 300.0,
@@ -170,6 +171,7 @@ async def run_md_workflow(
         output_format=output_format,
         log_filepath=log_filepath,
         summary_filepath=summary_filepath,
+        calculator_name=calculator_name,
         integrator=integrator,
         timestep_fs=timestep_fs,
         temperature_K=temperature_K,
@@ -250,7 +252,7 @@ async def optimize_with_mlip(
     input_format: Optional[str] = None,
     output_filepath: str = "optimized.xyz",
     output_format: Optional[str] = None,
-    calculator_name: str = "orb",
+    calculator_name: str = "nequix",
     max_steps: int = 50,
     fmax: float = 0.1,
     constraints: Optional[Dict] = None,
