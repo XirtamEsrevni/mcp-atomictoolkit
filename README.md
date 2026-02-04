@@ -22,22 +22,38 @@ from nequix.calculator import NequixCalculator
 atoms = ...
 atoms.calc = NequixCalculator("nequix-mp-1", backend="jax")
 ```
-## Deploy to Hugging Face (Docker Space)
-Use a Docker Space to host the MCP server with SSE transport.
+## Deploy to Render (Web Service)
+Render can run the MCP server directly from this repository.
 
-1. Create a new Hugging Face Space and select **Docker** as the SDK.
-2. Push this repository to the Space.
-3. Ensure the Space is running; it will start the MCP server on port `7860`.
-
-### Files used by the Space
-- `Dockerfile`: installs the package and runs the SSE server.
+### Files used by Render
 - `requirements.txt`: installs this repo and its dependencies.
-- `hf_server.py`: starts the MCP server with the correct transport.
+- `main.py`: starts the MCP server with the correct host/port and SSE transport.
+- `render.yaml`: provides a reproducible Render service definition.
+
+### render.yaml
+The repository includes the `render.yaml` below:
+```yaml
+services:
+  - type: web
+    name: mcp-atomictoolkit
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.13"
+```
+
+### One-time setup
+1. In Render, create a **New Web Service** and connect this GitHub repo.
+2. Render will auto-detect `render.yaml`. If prompted, confirm the build and start commands.
+3. Deploy. Render sets `$PORT` automatically and `main.py` binds to `0.0.0.0`.
 
 ### Server URL
-Once the Space is running, the SSE endpoint will be:
+Once running, the SSE endpoint will be:
 ```
-https://<hf-username>-<space-name>.hf.space/sse
+https://<render-service-name>.onrender.com/sse
 ```
 
 ### Listing on Smithery
