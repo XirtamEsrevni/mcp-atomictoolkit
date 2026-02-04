@@ -23,14 +23,28 @@ async def build_structure_workflow(
     structure_type: str = "bulk",
     crystal_system: str = "fcc",
     lattice_constant: float = 4.0,
+    pbc: List[bool] = None,
+    cell: Optional[List[List[float]]] = None,
+    cell_size: Optional[List[float]] = None,
+    output_filepath: str = "structure.xyz",
+    output_format: Optional[str] = None,
+    builder_kwargs: Optional[Dict] = None,
 ) -> Dict:
     """Build an atomic structure and return metadata.
 
     Args:
         formula: Chemical formula (e.g. 'Fe', 'TiO2')
-        structure_type: Type of structure ('bulk', 'surface', 'molecule')
+        structure_type: Type of structure
+            ('bulk', 'surface', 'molecule', 'supercell', 'amorphous', 'liquid',
+            'bicrystal', 'polycrystal')
         crystal_system: Crystal system for bulk ('fcc', 'bcc', 'sc', etc.)
         lattice_constant: Lattice constant in Angstroms
+        pbc: Periodic boundary condition flags
+        cell: Explicit 3x3 cell matrix
+        cell_size: Cell lengths (a, b, c) if cell not provided
+        output_filepath: Output file path for the built structure
+        output_format: Output file format (optional)
+        builder_kwargs: Extra builder-specific parameters
 
     Returns:
         Dict containing structure metadata
@@ -40,6 +54,12 @@ async def build_structure_workflow(
         structure_type=structure_type,
         crystal_system=crystal_system,
         lattice_constant=lattice_constant,
+        pbc=pbc or [True, True, True],
+        cell=cell,
+        cell_size=cell_size,
+        output_filepath=output_filepath,
+        output_format=output_format,
+        builder_kwargs=builder_kwargs,
     )
 
 
@@ -144,6 +164,12 @@ async def build_structure(
     structure_type: str = "bulk",
     crystal_system: str = "fcc",
     lattice_constant: float = 4.0,
+    pbc: List[bool] = None,
+    cell: Optional[List[List[float]]] = None,
+    cell_size: Optional[List[float]] = None,
+    output_filepath: str = "structure.xyz",
+    output_format: Optional[str] = None,
+    builder_kwargs: Optional[Dict] = None,
 ) -> Dict:
     """Deprecated: use build_structure_workflow instead."""
     return await build_structure_workflow(
@@ -151,6 +177,12 @@ async def build_structure(
         structure_type=structure_type,
         crystal_system=crystal_system,
         lattice_constant=lattice_constant,
+        pbc=pbc,
+        cell=cell,
+        cell_size=cell_size,
+        output_filepath=output_filepath,
+        output_format=output_format,
+        builder_kwargs=builder_kwargs,
     )
 
 
