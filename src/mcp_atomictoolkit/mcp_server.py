@@ -141,9 +141,37 @@ async def optimize_structure_workflow(
 
 
 @mcp.tool()
-async def run_md_workflow(*args, **kwargs) -> Dict:
-    """Run molecular dynamics workflow (not yet implemented)."""
-    return run_md_workflow_impl(*args, **kwargs)
+async def run_md_workflow(
+    input_filepath: str,
+    input_format: Optional[str] = None,
+    output_trajectory_filepath: str = "md.traj",
+    output_format: Optional[str] = None,
+    log_filepath: str = "md.log",
+    summary_filepath: str = "md_summary.txt",
+    integrator: str = "velocityverlet",
+    timestep_fs: float = 1.0,
+    temperature_K: float = 300.0,
+    steps: int = 100,
+    friction: float = 0.02,
+    taut: float = 100.0,
+    trajectory_interval: int = 1,
+) -> Dict:
+    """Run molecular dynamics workflow and return outputs."""
+    return run_md_workflow_impl(
+        input_filepath=input_filepath,
+        input_format=input_format,
+        output_trajectory_filepath=output_trajectory_filepath,
+        output_format=output_format,
+        log_filepath=log_filepath,
+        summary_filepath=summary_filepath,
+        integrator=integrator,
+        timestep_fs=timestep_fs,
+        temperature_K=temperature_K,
+        steps=steps,
+        friction=friction,
+        taut=taut,
+        trajectory_interval=trajectory_interval,
+    )
 
 
 @mcp.tool()
