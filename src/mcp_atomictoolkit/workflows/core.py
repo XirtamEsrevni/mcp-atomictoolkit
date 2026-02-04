@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Sequence
 
 from ase import Atoms
 
@@ -17,14 +17,38 @@ def build_structure_workflow(
     structure_type: str = "bulk",
     crystal_system: str = "fcc",
     lattice_constant: float = 4.0,
+    pbc: Sequence[bool] = (True, True, True),
+    cell: Optional[List[List[float]]] = None,
+    cell_size: Optional[Sequence[float]] = None,
+    output_filepath: str = "structure.xyz",
+    output_format: Optional[str] = None,
+    builder_kwargs: Optional[Dict] = None,
 ) -> Dict:
-    """Build an atomic structure and return metadata."""
+    """Build an atomic structure, write to disk, and return metadata."""
     structure = create_structure(
-        formula, structure_type, crystal_system, lattice_constant
+        formula,
+        structure_type,
+        crystal_system,
+        lattice_constant,
+        pbc=pbc,
+        cell=cell,
+        cell_size=cell_size,
+        **(builder_kwargs or {}),
     )
+    write_structure(structure, output_filepath, output_format)
+    info = get_structure_info(structure)
+    symmetry_summary = {
+        "spacegroup": info.get("spacegroup"),
+        "crystal_system": info.get("crystal_system"),
+        "point_group": info.get("point_group"),
+    }
     return {
-        "info": get_structure_info(structure),
-        "symbols": structure.get_chemical_symbols(),
+        "filepath": str(Path(output_filepath).absolute()),
+        "format": output_format or Path(output_filepath).suffix[1:],
+        "formula": info.get("formula"),
+        "num_atoms": info.get("num_atoms"),
+        "cell": info.get("cell"),
+        "symmetry": symmetry_summary,
     }
 
 
