@@ -8,6 +8,7 @@ from typing import Dict, List, Optional, Sequence
 from ase import Atoms
 
 from mcp_atomictoolkit.io_handlers import read_structure, write_structure
+from mcp_atomictoolkit.md_runner import run_md
 from mcp_atomictoolkit.optimizers import optimize_structure
 from mcp_atomictoolkit.structure_operations import create_structure, get_structure_info
 
@@ -116,9 +117,37 @@ def optimize_structure_workflow(
     }
 
 
-def run_md_workflow(*_args, **_kwargs) -> Dict:
-    """Placeholder for MD workflow."""
-    raise NotImplementedError("MD workflow is not implemented yet.")
+def run_md_workflow(
+    input_filepath: str,
+    input_format: Optional[str] = None,
+    output_trajectory_filepath: str = "md.traj",
+    output_format: Optional[str] = None,
+    log_filepath: str = "md.log",
+    summary_filepath: str = "md_summary.txt",
+    integrator: str = "velocityverlet",
+    timestep_fs: float = 1.0,
+    temperature_K: float = 300.0,
+    steps: int = 100,
+    friction: float = 0.02,
+    taut: float = 100.0,
+    trajectory_interval: int = 1,
+) -> Dict:
+    """Run an MD simulation and return output paths and summary stats."""
+    return run_md(
+        input_filepath=input_filepath,
+        input_format=input_format,
+        output_trajectory_filepath=output_trajectory_filepath,
+        output_format=output_format,
+        log_filepath=log_filepath,
+        summary_filepath=summary_filepath,
+        integrator=integrator,
+        timestep_fs=timestep_fs,
+        temperature_K=temperature_K,
+        steps=steps,
+        friction=friction,
+        taut=taut,
+        trajectory_interval=trajectory_interval,
+    )
 
 
 def analyze_trajectory_workflow(*_args, **_kwargs) -> Dict:
