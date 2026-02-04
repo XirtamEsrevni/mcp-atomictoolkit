@@ -48,7 +48,15 @@ services:
 ### One-time setup
 1. In Render, create a **New Web Service** and connect this GitHub repo.
 2. Render will auto-detect `render.yaml`. If prompted, confirm the build and start commands.
-3. Deploy. Render sets `$PORT` automatically and `main.py` binds to `0.0.0.0`.
+3. Deploy. Render sets `$PORT` automatically and `main.py` starts Uvicorn on `0.0.0.0:$PORT`.
+
+### If Render reports "No open ports detected"
+Ensure the service is using the Render blueprint values so Uvicorn starts the HTTP server.
+Set these in the Render UI if they were overridden:
+
+- **Build Command**: `pip install -r requirements.txt`
+- **Start Command**: `python main.py`
+- **Health Check Path**: `/healthz`
 
 ### Server URL
 Once running, the SSE endpoint will be:
