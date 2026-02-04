@@ -13,4 +13,6 @@ dependencies = [
     "orb-models>=0.4.2",
     "pymatgen>=2025.3.10",
     "pynanoflann>=0.10.0",
+    "starlette>=0.37.0",
+    "uvicorn>=0.30.0",
 ]
