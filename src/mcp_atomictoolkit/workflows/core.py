@@ -85,35 +85,33 @@ def write_structure_workflow(
 
 
 def optimize_structure_workflow(
-    positions: List[List[float]],
-    symbols: List[str],
-    cell: List[List[float]],
-    mlip_type: str = "orb",
+    input_filepath: str,
+    input_format: Optional[str] = None,
+    output_filepath: str = "optimized.xyz",
+    output_format: Optional[str] = None,
+    calculator_name: str = "orb",
     max_steps: int = 50,
     fmax: float = 0.1,
-    output_filepath: Optional[str] = None,
-    output_format: Optional[str] = None,
+    constraints: Optional[Dict] = None,
 ) -> Dict:
-    """Optimize a structure and optionally write results to disk."""
-    structure = Atoms(symbols=symbols, positions=positions, cell=cell, pbc=True)
+    """Optimize a structure read from disk, write results, and return metadata."""
+    structure = read_structure(input_filepath, input_format)
     optimized = optimize_structure(
-        structure, mlip_type=mlip_type, max_steps=max_steps, fmax=fmax
+        structure,
+        calculator_name=calculator_name,
+        max_steps=max_steps,
+        fmax=fmax,
+        constraints=constraints,
     )
 
-    output_path = None
-    if output_filepath:
-        write_structure(optimized, output_filepath, output_format)
-        output_path = str(Path(output_filepath).absolute())
+    write_structure(optimized, output_filepath, output_format)
+    output_path = str(Path(output_filepath).absolute())
 
     return {
-        "info": get_structure_info(optimized),
-        "symbols": optimized.get_chemical_symbols(),
+        "output_filepath": output_path,
         "converged": optimized.info.get("optimization_converged", False),
         "steps": optimized.info.get("optimization_steps", 0),
         "final_fmax": optimized.info.get("optimization_fmax", None),
-        "output_filepath": output_path,
-        "output_format": output_format
-        or (Path(output_filepath).suffix[1:] if output_filepath else None),
     }
 
 

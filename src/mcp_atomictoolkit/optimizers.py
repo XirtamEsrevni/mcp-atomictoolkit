@@ -1,40 +1,84 @@
 """Structure optimization using MLIPs (Orb and MACE)."""
 
+from typing import Any, Dict, List, Optional, Tuple
+
 import numpy as np
 from ase import Atoms
+from ase.constraints import FixAtoms, FixBondLength, FixBondLengths
 from ase.optimize import BFGS
 from orb_models.forcefield import pretrained
 from orb_models.forcefield.calculator import ORBCalculator
 
 
 def get_orb_calculator() -> ORBCalculator:
-    """Initialize Orb calculator for given structure.
-
-    Args:
-        structure: Input structure
-
-    Returns:
-        Configured Orb calculator
-    """
+    """Initialize Orb calculator."""
     orbff = pretrained.orb_v2(device="cpu")
     calculator = ORBCalculator(orbff, device="cpu")
     return calculator
 
 
+def get_calculator(calculator_name: str) -> ORBCalculator:
+    """Return an ASE calculator for the requested MLIP."""
+    if calculator_name.lower() == "orb":
+        return get_orb_calculator()
+    raise ValueError(f"Unknown MLIP type: {calculator_name}")
+
+
+def apply_constraints(atoms: Atoms, constraints: Optional[Dict[str, Any]]) -> None:
+    """Apply ASE constraints (fixed atoms, fixed bonds, fixed cell metadata)."""
+    if not constraints:
+        return
+
+    new_constraints: List[Any] = []
+
+    fixed_atoms = constraints.get("fixed_atoms")
+    if fixed_atoms:
+        new_constraints.append(FixAtoms(indices=fixed_atoms))
+
+    fixed_bonds = constraints.get("fixed_bonds") or constraints.get("bonds")
+    if fixed_bonds:
+        pairs: List[Tuple[int, int]] = []
+        for bond in fixed_bonds:
+            if isinstance(bond, dict):
+                indices = bond.get("indices") or bond.get("pair")
+                if indices is None:
+                    indices = (bond.get("a"), bond.get("b"))
+                pairs.append(tuple(indices))
+            else:
+                pairs.append(tuple(bond))
+        if len(pairs) == 1:
+            new_constraints.append(FixBondLength(*pairs[0]))
+        else:
+            new_constraints.append(FixBondLengths(pairs))
+
+    if new_constraints:
+        existing = atoms.constraints
+        if existing:
+            if not isinstance(existing, (list, tuple)):
+                existing = [existing]
+            new_constraints = list(existing) + new_constraints
+        atoms.set_constraint(new_constraints)
+
+    if "fixed_cell" in constraints:
+        atoms.info["fixed_cell"] = bool(constraints["fixed_cell"])
+
+
 def optimize_structure(
     structure: Atoms,
-    mlip_type: str = "orb",
+    calculator_name: str = "orb",
     max_steps: int = 50,
     fmax: float = 0.1,
+    constraints: Optional[Dict[str, Any]] = None,
     **kwargs,
 ) -> Atoms:
     """Optimize structure using specified MLIP.
 
     Args:
         structure: Input structure
-        mlip_type: Type of MLIP ('orb' or 'mace')
+        calculator_name: Type of MLIP ('orb' or 'mace')
         max_steps: Maximum optimization steps
         fmax: Force convergence criterion
+        constraints: Constraint settings (fixed atoms/cell/bonds)
         **kwargs: Additional optimization parameters
 
     Returns:
@@ -42,12 +86,10 @@ def optimize_structure(
     """
     # Create a copy to avoid modifying input
     atoms = structure.copy()
+    apply_constraints(atoms, constraints)
 
     # Set up calculator
-    if mlip_type.lower() == "orb":
-        calculator = get_orb_calculator()
-    else:
-        raise ValueError(f"Unknown MLIP type: {mlip_type}")
+    calculator = get_calculator(calculator_name)
 
     atoms.calc = calculator
 

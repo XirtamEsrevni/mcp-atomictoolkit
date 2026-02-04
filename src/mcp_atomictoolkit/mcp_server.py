@@ -110,33 +110,39 @@ async def write_structure_workflow(
 
 @mcp.tool()
 async def optimize_structure_workflow(
-    positions: List[List[float]],
-    symbols: List[str],
-    cell: List[List[float]],
-    mlip_type: str = "orb",
+    input_filepath: str,
+    input_format: Optional[str] = None,
+    output_filepath: str = "optimized.xyz",
+    output_format: Optional[str] = None,
+    calculator_name: str = "orb",
     max_steps: int = 50,
     fmax: float = 0.1,
+    constraints: Optional[Dict] = None,
 ) -> Dict:
     """Optimize structure using MLIP and return metadata.
 
     Args:
-        positions: Atomic positions
-        symbols: Chemical symbols
-        cell: Unit cell vectors
-        mlip_type: Type of MLIP ('orb' or 'mace')
+        input_filepath: Path to structure file
+        input_format: File format (optional)
+        output_filepath: Output file path
+        output_format: Output file format (optional)
+        calculator_name: Type of MLIP ('orb' or 'mace')
         max_steps: Maximum optimization steps
         fmax: Force convergence criterion
+        constraints: Constraint settings (fixed atoms/cell/bonds)
 
     Returns:
         Dict containing optimized structure metadata
     """
     return optimize_structure_workflow_impl(
-        positions=positions,
-        symbols=symbols,
-        cell=cell,
-        mlip_type=mlip_type,
+        input_filepath=input_filepath,
+        input_format=input_format,
+        output_filepath=output_filepath,
+        output_format=output_format,
+        calculator_name=calculator_name,
         max_steps=max_steps,
         fmax=fmax,
+        constraints=constraints,
     )
 
 
@@ -240,21 +246,25 @@ async def write_structure_file(
 
 @mcp.tool()
 async def optimize_with_mlip(
-    positions: List[List[float]],
-    symbols: List[str],
-    cell: List[List[float]],
-    mlip_type: str = "orb",
+    input_filepath: str,
+    input_format: Optional[str] = None,
+    output_filepath: str = "optimized.xyz",
+    output_format: Optional[str] = None,
+    calculator_name: str = "orb",
     max_steps: int = 50,
     fmax: float = 0.1,
+    constraints: Optional[Dict] = None,
 ) -> Dict:
     """Deprecated: use optimize_structure_workflow instead."""
     return await optimize_structure_workflow(
-        positions=positions,
-        symbols=symbols,
-        cell=cell,
-        mlip_type=mlip_type,
+        input_filepath=input_filepath,
+        input_format=input_format,
+        output_filepath=output_filepath,
+        output_format=output_format,
+        calculator_name=calculator_name,
         max_steps=max_steps,
         fmax=fmax,
+        constraints=constraints,
     )
 
 
