@@ -7,6 +7,9 @@ from typing import Dict, List, Optional, Sequence
 
 from ase import Atoms
 
+from mcp_atomictoolkit.analysis.autocorrelation import analyze_vacf
+from mcp_atomictoolkit.analysis.structure import analyze_structure
+from mcp_atomictoolkit.analysis.trajectory import analyze_trajectory
 from mcp_atomictoolkit.io_handlers import read_structure, write_structure
 from mcp_atomictoolkit.md_runner import run_md
 from mcp_atomictoolkit.optimizers import optimize_structure
@@ -56,14 +59,29 @@ def build_structure_workflow(
 def analyze_structure_workflow(
     filepath: str,
     format: Optional[str] = None,
+    output_dir: str = "analysis_outputs/structure",
+    rdf_max: float = 10.0,
+    rdf_bins: int = 200,
+    coordination_cutoff: Optional[float] = None,
+    coordination_factor: float = 1.2,
 ) -> Dict:
-    """Analyze a structure file and return metadata."""
+    """Analyze a structure file and return metadata and analysis artifacts."""
+    analysis = analyze_structure(
+        filepath=filepath,
+        format=format,
+        output_dir=output_dir,
+        rdf_max=rdf_max,
+        rdf_bins=rdf_bins,
+        coordination_cutoff=coordination_cutoff,
+        coordination_factor=coordination_factor,
+    )
     structure = read_structure(filepath, format)
     return {
         "filepath": str(Path(filepath).absolute()),
         "format": format or Path(filepath).suffix[1:],
         "info": get_structure_info(structure),
         "symbols": structure.get_chemical_symbols(),
+        "analysis": analysis,
     }
 
 
@@ -150,11 +168,39 @@ def run_md_workflow(
     )
 
 
-def analyze_trajectory_workflow(*_args, **_kwargs) -> Dict:
-    """Placeholder for trajectory analysis workflow."""
-    raise NotImplementedError("Trajectory analysis workflow is not implemented yet.")
+def analyze_trajectory_workflow(
+    filepath: str,
+    format: Optional[str] = None,
+    output_dir: str = "analysis_outputs/trajectory",
+    timestep_fs: float = 1.0,
+    rdf_max: float = 10.0,
+    rdf_bins: int = 200,
+    rdf_stride: int = 1,
+) -> Dict:
+    """Analyze a trajectory and return analysis artifacts."""
+    return analyze_trajectory(
+        filepath=filepath,
+        format=format,
+        output_dir=output_dir,
+        timestep_fs=timestep_fs,
+        rdf_max=rdf_max,
+        rdf_bins=rdf_bins,
+        rdf_stride=rdf_stride,
+    )
 
 
-def autocorrelation_workflow(*_args, **_kwargs) -> Dict:
-    """Placeholder for autocorrelation workflow."""
-    raise NotImplementedError("Autocorrelation workflow is not implemented yet.")
+def autocorrelation_workflow(
+    filepath: str,
+    format: Optional[str] = None,
+    output_dir: str = "analysis_outputs/autocorrelation",
+    timestep_fs: float = 1.0,
+    max_lag: Optional[int] = None,
+) -> Dict:
+    """Compute VACF/autocorrelation analysis and diffusion coefficients."""
+    return analyze_vacf(
+        filepath=filepath,
+        format=format,
+        output_dir=output_dir,
+        timestep_fs=timestep_fs,
+        max_lag=max_lag,
+    )

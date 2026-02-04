@@ -65,7 +65,13 @@ async def build_structure_workflow(
 
 @mcp.tool()
 async def analyze_structure_workflow(
-    filepath: str, format: Optional[str] = None
+    filepath: str,
+    format: Optional[str] = None,
+    output_dir: str = "analysis_outputs/structure",
+    rdf_max: float = 10.0,
+    rdf_bins: int = 200,
+    coordination_cutoff: Optional[float] = None,
+    coordination_factor: float = 1.2,
 ) -> Dict:
     """Analyze structure file and return metadata.
 
@@ -76,7 +82,15 @@ async def analyze_structure_workflow(
     Returns:
         Dict containing structure metadata
     """
-    return analyze_structure_workflow_impl(filepath=filepath, format=format)
+    return analyze_structure_workflow_impl(
+        filepath=filepath,
+        format=format,
+        output_dir=output_dir,
+        rdf_max=rdf_max,
+        rdf_bins=rdf_bins,
+        coordination_cutoff=coordination_cutoff,
+        coordination_factor=coordination_factor,
+    )
 
 
 @mcp.tool()
@@ -183,15 +197,43 @@ async def run_md_workflow(
 
 
 @mcp.tool()
-async def analyze_trajectory_workflow(*args, **kwargs) -> Dict:
-    """Analyze trajectory workflow (not yet implemented)."""
-    return analyze_trajectory_workflow_impl(*args, **kwargs)
+async def analyze_trajectory_workflow(
+    filepath: str,
+    format: Optional[str] = None,
+    output_dir: str = "analysis_outputs/trajectory",
+    timestep_fs: float = 1.0,
+    rdf_max: float = 10.0,
+    rdf_bins: int = 200,
+    rdf_stride: int = 1,
+) -> Dict:
+    """Analyze a trajectory and return analysis artifacts."""
+    return analyze_trajectory_workflow_impl(
+        filepath=filepath,
+        format=format,
+        output_dir=output_dir,
+        timestep_fs=timestep_fs,
+        rdf_max=rdf_max,
+        rdf_bins=rdf_bins,
+        rdf_stride=rdf_stride,
+    )
 
 
 @mcp.tool()
-async def autocorrelation_workflow(*args, **kwargs) -> Dict:
-    """Autocorrelation workflow (not yet implemented)."""
-    return autocorrelation_workflow_impl(*args, **kwargs)
+async def autocorrelation_workflow(
+    filepath: str,
+    format: Optional[str] = None,
+    output_dir: str = "analysis_outputs/autocorrelation",
+    timestep_fs: float = 1.0,
+    max_lag: Optional[int] = None,
+) -> Dict:
+    """Autocorrelation workflow for VACF and diffusion."""
+    return autocorrelation_workflow_impl(
+        filepath=filepath,
+        format=format,
+        output_dir=output_dir,
+        timestep_fs=timestep_fs,
+        max_lag=max_lag,
+    )
 
 
 @mcp.tool()
