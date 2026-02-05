@@ -1,4 +1,6 @@
-from typing import List, Dict, Optional
+import logging
+from time import perf_counter
+from typing import Any, Callable, Dict, List, Optional
 from fastmcp import FastMCP
 
 from mcp_atomictoolkit.workflows.core import (
@@ -14,6 +16,46 @@ from mcp_atomictoolkit.workflows.core import (
 mcp = FastMCP(
     "atomictoolkit",
 )
+
+logger = logging.getLogger("mcp_atomictoolkit.tools")
+
+
+def _compact_kwargs(kwargs: Dict[str, Any]) -> Dict[str, Any]:
+    """Compact large args in logs while preserving useful context."""
+    compacted: Dict[str, Any] = {}
+    for key, value in kwargs.items():
+        if isinstance(value, str) and len(value) > 200:
+            compacted[key] = f"<str:{len(value)} chars>"
+        elif isinstance(value, list) and len(value) > 25:
+            compacted[key] = f"<list:{len(value)} items>"
+        elif isinstance(value, dict) and len(value) > 25:
+            compacted[key] = f"<dict:{len(value)} keys>"
+        else:
+            compacted[key] = value
+    return compacted
+
+
+def _run_tool(tool_name: str, impl: Callable[..., Dict], **kwargs: Any) -> Dict:
+    start = perf_counter()
+    compact_args = _compact_kwargs(kwargs)
+    logger.info("Tool %s called with args=%s", tool_name, compact_args)
+    try:
+        result = impl(**kwargs)
+    except Exception as exc:
+        elapsed_ms = (perf_counter() - start) * 1000
+        logger.exception(
+            "Tool %s failed after %.1f ms with %s: %s (args=%s)",
+            tool_name,
+            elapsed_ms,
+            exc.__class__.__name__,
+            exc,
+            compact_args,
+        )
+        raise
+
+    elapsed_ms = (perf_counter() - start) * 1000
+    logger.info("Tool %s succeeded in %.1f ms", tool_name, elapsed_ms)
+    return result
 
 
 @mcp.tool()
@@ -48,7 +90,9 @@ async def build_structure_workflow(
     Returns:
         Dict containing structure metadata
     """
-    return build_structure_workflow_impl(
+    return _run_tool(
+        "build_structure_workflow",
+        build_structure_workflow_impl,
         formula=formula,
         structure_type=structure_type,
         crystal_system=crystal_system,
@@ -81,7 +125,9 @@ async def analyze_structure_workflow(
     Returns:
         Dict containing structure metadata
     """
-    return analyze_structure_workflow_impl(
+    return _run_tool(
+        "analyze_structure_workflow",
+        analyze_structure_workflow_impl,
         filepath=filepath,
         format=format,
         output_dir=output_dir,
@@ -112,7 +158,9 @@ async def write_structure_workflow(
     Returns:
         Dict with status and file info
     """
-    return write_structure_workflow_impl(
+    return _run_tool(
+        "write_structure_workflow",
+        write_structure_workflow_impl,
         positions=positions,
         symbols=symbols,
         cell=cell,
@@ -147,7 +195,9 @@ async def optimize_structure_workflow(
     Returns:
         Dict containing optimized structure metadata
     """
-    return optimize_structure_workflow_impl(
+    return _run_tool(
+        "optimize_structure_workflow",
+        optimize_structure_workflow_impl,
         input_filepath=input_filepath,
         input_format=input_format,
         output_filepath=output_filepath,
@@ -177,7 +227,9 @@ async def run_md_workflow(
     trajectory_interval: int = 1,
 ) -> Dict:
     """Run molecular dynamics workflow and return outputs."""
-    return run_md_workflow_impl(
+    return _run_tool(
+        "run_md_workflow",
+        run_md_workflow_impl,
         input_filepath=input_filepath,
         input_format=input_format,
         output_trajectory_filepath=output_trajectory_filepath,
@@ -206,7 +258,9 @@ async def analyze_trajectory_workflow(
     rdf_stride: int = 1,
 ) -> Dict:
     """Analyze a trajectory and return analysis artifacts."""
-    return analyze_trajectory_workflow_impl(
+    return _run_tool(
+        "analyze_trajectory_workflow",
+        analyze_trajectory_workflow_impl,
         filepath=filepath,
         format=format,
         output_dir=output_dir,
@@ -226,7 +280,9 @@ async def autocorrelation_workflow(
     max_lag: Optional[int] = None,
 ) -> Dict:
     """Autocorrelation workflow for VACF and diffusion."""
-    return autocorrelation_workflow_impl(
+    return _run_tool(
+        "autocorrelation_workflow",
+        autocorrelation_workflow_impl,
         filepath=filepath,
         format=format,
         output_dir=output_dir,
