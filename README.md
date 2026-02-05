@@ -116,3 +116,11 @@ If `/sse` returns HTML for a login page or a `401/403`, the scanner will show
 "Authorization Required" until that external auth layer is removed or configured for public access.
 If scanner logs report `Initialization failed with status 404`, it often means the scanner tried
 the wrong path and could not discover your MCP endpoint; serving a valid server card resolves this.
+
+## Async worker paradigm for long-running tasks
+
+For a detailed design of non-blocking MCP task submission, durable task lifecycle management,
+worker pools, queue semantics, restart recovery, and implementation options (SQLite/Postgres/Redis/Celery/managed jobs),
+see:
+
+- [`docs/async-worker-paradigm.md`](docs/async-worker-paradigm.md)
