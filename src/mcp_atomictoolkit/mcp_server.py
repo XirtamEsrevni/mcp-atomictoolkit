@@ -13,7 +13,6 @@ from mcp_atomictoolkit.workflows.core import (
 
 mcp = FastMCP(
     "atomictoolkit",
-    description="ASE and more tools",
 )
 
 
