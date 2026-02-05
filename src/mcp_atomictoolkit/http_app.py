@@ -22,12 +22,53 @@ class _PathRewriteApp:
         await self.app(rewritten_scope, receive, send)
 
 
+class _AcceptHeaderCompatApp:
+    """ASGI adapter that tolerates MCP scanners with missing Accept headers.
+
+    Some directory scanners POST JSON-RPC requests without an explicit
+    ``Accept`` header. FastMCP's Streamable HTTP transport rejects those
+    requests with ``406 Not Acceptable``. To improve interoperability, we
+    synthesize an MCP-compatible Accept value when it is absent.
+    """
+
+    _required_accept = b"application/json, text/event-stream"
+
+    def __init__(self, app) -> None:
+        self.app = app
+        self.lifespan = getattr(app, "lifespan", None)
+
+    async def __call__(self, scope, receive, send) -> None:
+        if scope.get("type") == "http":
+            raw_headers = list(scope.get("headers", []))
+            accept_idx = next(
+                (idx for idx, (name, _) in enumerate(raw_headers) if name.lower() == b"accept"),
+                None,
+            )
+            should_rewrite = accept_idx is None
+            if accept_idx is not None:
+                accept_value = raw_headers[accept_idx][1].decode("latin-1").lower()
+                should_rewrite = "application/json" not in accept_value
+
+            if should_rewrite:
+                if accept_idx is None:
+                    raw_headers.append((b"accept", self._required_accept))
+                else:
+                    raw_headers[accept_idx] = (b"accept", self._required_accept)
+
+                rewritten_scope = dict(scope)
+                rewritten_scope["headers"] = raw_headers
+                scope = rewritten_scope
+        await self.app(scope, receive, send)
+
+
 # Primary MCP endpoint expected by Smithery and most registries.
-_mcp_root_app = mcp.http_app(
-    path="/",
-    transport="streamable-http",
-    json_response=True,
-    stateless_http=True,
+_mcp_root_app = _AcceptHeaderCompatApp(
+    mcp.http_app(
+        path="/",
+        transport="streamable-http",
+        json_response=True,
+        stateless_http=True,
+    )
 )
 
 
