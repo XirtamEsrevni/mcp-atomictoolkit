@@ -27,7 +27,7 @@ Render can run the MCP server directly from this repository.
 
 ### Files used by Render
 - `requirements.txt`: installs this repo and its dependencies.
-- `main.py`: starts the MCP server with the correct host/port and SSE transport.
+- `main.py`: optional entrypoint that starts the MCP server with the correct host/port and SSE transport.
 - `render.yaml`: provides a reproducible Render service definition.
 
 ### render.yaml
@@ -39,7 +39,8 @@ services:
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: python main.py
+    startCommand: uvicorn mcp_atomictoolkit.http_app:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /healthz
     envVars:
       - key: PYTHON_VERSION
         value: "3.13"
@@ -48,14 +49,16 @@ services:
 ### One-time setup
 1. In Render, create a **New Web Service** and connect this GitHub repo.
 2. Render will auto-detect `render.yaml`. If prompted, confirm the build and start commands.
-3. Deploy. Render sets `$PORT` automatically and `main.py` starts Uvicorn on `0.0.0.0:$PORT`.
+3. Deploy. Render sets `$PORT` automatically and Uvicorn binds to `0.0.0.0:$PORT`.
+   (`python main.py` is also valid because it reads `$PORT`, but the blueprint defaults to the Uvicorn
+   module invocation.)
 
 ### If Render reports "No open ports detected"
 Ensure the service is using the Render blueprint values so Uvicorn starts the HTTP server.
 Set these in the Render UI if they were overridden:
 
 - **Build Command**: `pip install -r requirements.txt`
-- **Start Command**: `python main.py`
+- **Start Command**: `uvicorn mcp_atomictoolkit.http_app:app --host 0.0.0.0 --port $PORT`
 - **Health Check Path**: `/healthz`
 
 ### Server URL

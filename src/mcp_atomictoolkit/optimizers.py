@@ -1,20 +1,24 @@
 """Structure optimization using MLIPs (Orb and Nequix)."""
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 
 import numpy as np
 from ase import Atoms
 from ase.constraints import FixAtoms, FixBondLength, FixBondLengths
 from ase.optimize import BFGS
-from nequix.calculator import NequixCalculator
-from orb_models.forcefield import pretrained
-from orb_models.forcefield.calculator import ORBCalculator
+
+if TYPE_CHECKING:
+    from nequix.calculator import NequixCalculator
+    from orb_models.forcefield.calculator import ORBCalculator
 
 NEQUIX_DEFAULT_MODEL = "nequix-mp-1"
 
 
-def get_orb_calculator() -> ORBCalculator:
+def get_orb_calculator() -> "ORBCalculator":
     """Initialize Orb calculator."""
+    from orb_models.forcefield import pretrained
+    from orb_models.forcefield.calculator import ORBCalculator
+
     orbff = pretrained.orb_v2(device="cpu")
     calculator = ORBCalculator(orbff, device="cpu")
     return calculator
@@ -23,15 +27,17 @@ def get_orb_calculator() -> ORBCalculator:
 def get_nequix_calculator(
     model_name: str = NEQUIX_DEFAULT_MODEL,
     backend: str = "jax",
-) -> NequixCalculator:
+) -> "NequixCalculator":
     """Initialize Nequix calculator on CPU."""
+    from nequix.calculator import NequixCalculator
+
     return NequixCalculator(
         model_name,
         backend=backend,
     )
 
 
-def get_calculator(calculator_name: str) -> ORBCalculator | NequixCalculator:
+def get_calculator(calculator_name: str) -> "ORBCalculator | NequixCalculator":
     """Return an ASE calculator for the requested MLIP."""
     calculator_key = calculator_name.lower()
     if calculator_key == "orb":
