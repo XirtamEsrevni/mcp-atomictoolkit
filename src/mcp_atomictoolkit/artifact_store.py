@@ -3,6 +3,7 @@ from __future__ import annotations
 import mimetypes
 import os
 import re
+from contextvars import ContextVar, Token
 from dataclasses import dataclass
 from pathlib import Path
 from threading import Lock
@@ -45,6 +46,7 @@ class ArtifactStore:
 
 
 artifact_store = ArtifactStore()
+_request_base_url: ContextVar[Optional[str]] = ContextVar("artifact_request_base_url", default=None)
 
 
 _ALLOWED_SUFFIXES = {
@@ -91,10 +93,24 @@ def _iter_candidate_paths(data: Any) -> Iterable[Tuple[str, str]]:
 
 
 def _artifact_base_url() -> str:
+    request_base = _request_base_url.get()
+    if request_base:
+        return request_base.rstrip("/")
+
     base = os.environ.get("ARTIFACT_BASE_URL") or os.environ.get("PUBLIC_BASE_URL")
     if base:
         return base.rstrip("/")
     return ""
+
+
+def set_request_base_url(base_url: str) -> Token:
+    """Set request-scoped base URL for artifact links in the active context."""
+    return _request_base_url.set(base_url.rstrip("/"))
+
+
+def reset_request_base_url(token: Token) -> None:
+    """Restore previous request-scoped base URL context."""
+    _request_base_url.reset(token)
 
 
 def _guess_artifact_type(path: Path) -> str:
