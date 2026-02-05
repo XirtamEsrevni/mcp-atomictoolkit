@@ -62,6 +62,14 @@ Set these in the Render UI if they were overridden:
 - **Health Check Path**: `/healthz`
 - If logs include `ImportError: cannot import name 'SseServerTransport'`, deploy with updated code that uses `mcp.http_app(..., transport="sse")` and ensure `fastmcp>=2.14.5` is installed.
 
+
+### Downloadable artifacts (structures, plots, tables)
+All tools now return an `artifacts` list when output files are created (for example: `extxyz`, `traj`, `cif`, `png`, `svg`, `eps`, `csv`, `dat`). Each artifact includes a `download_url` that can be opened directly in Cursor/Claude clients without embedding binary data in chat context.
+
+- Default URL shape: `/artifacts/<artifact_id>/<filename>`
+- Public absolute URLs: set `ARTIFACT_BASE_URL` (or `PUBLIC_BASE_URL`) to your Render URL, e.g. `https://<service>.onrender.com`
+- Downloads are served with attachment headers from the MCP app itself.
+
 ### Server URL
 Once running, the MCP endpoint will be:
 ```
