@@ -116,3 +116,14 @@ If `/sse` returns HTML for a login page or a `401/403`, the scanner will show
 "Authorization Required" until that external auth layer is removed or configured for public access.
 If scanner logs report `Initialization failed with status 404`, it often means the scanner tried
 the wrong path and could not discover your MCP endpoint; serving a valid server card resolves this.
+
+## Testing and coverage
+
+Run the full test suite with coverage locally:
+
+```bash
+pip install -e .[test]
+pytest --cov --cov-report=term-missing --cov-fail-under=80
+```
+
+CI is configured in `.github/workflows/tests.yml` to execute the same coverage gate on every pull request and on pushes to `main`.

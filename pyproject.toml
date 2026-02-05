@@ -16,3 +16,15 @@ dependencies = [
     "starlette>=0.37.0",
     "uvicorn>=0.30.0",
 ]
+
+
+[project.optional-dependencies]
+test = [
+    "hypothesis>=6.112.0",
+    "pytest>=8.3.0",
+    "pytest-cov>=5.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
