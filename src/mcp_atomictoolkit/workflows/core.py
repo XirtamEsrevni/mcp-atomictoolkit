@@ -24,7 +24,7 @@ def build_structure_workflow(
     pbc: Sequence[bool] = (True, True, True),
     cell: Optional[List[List[float]]] = None,
     cell_size: Optional[Sequence[float]] = None,
-    output_filepath: str = "structure.xyz",
+    output_filepath: str = "structure.extxyz",
     output_format: Optional[str] = None,
     builder_kwargs: Optional[Dict] = None,
 ) -> Dict:
@@ -107,7 +107,7 @@ def write_structure_workflow(
 def optimize_structure_workflow(
     input_filepath: str,
     input_format: Optional[str] = None,
-    output_filepath: str = "optimized.xyz",
+    output_filepath: str = "optimized.extxyz",
     output_format: Optional[str] = None,
     calculator_name: str = "nequix",
     max_steps: int = 50,
@@ -138,7 +138,7 @@ def optimize_structure_workflow(
 def run_md_workflow(
     input_filepath: str,
     input_format: Optional[str] = None,
-    output_trajectory_filepath: str = "md.traj",
+    output_trajectory_filepath: str = "md.extxyz",
     output_format: Optional[str] = None,
     log_filepath: str = "md.log",
     summary_filepath: str = "md_summary.txt",

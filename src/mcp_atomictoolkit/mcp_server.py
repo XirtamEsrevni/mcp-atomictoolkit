@@ -68,7 +68,7 @@ async def build_structure_workflow(
     pbc: List[bool] = None,
     cell: Optional[List[List[float]]] = None,
     cell_size: Optional[List[float]] = None,
-    output_filepath: str = "structure.xyz",
+    output_filepath: str = "structure.extxyz",
     output_format: Optional[str] = None,
     builder_kwargs: Optional[Dict] = None,
 ) -> Dict:
@@ -176,7 +176,7 @@ async def write_structure_workflow(
 async def optimize_structure_workflow(
     input_filepath: str,
     input_format: Optional[str] = None,
-    output_filepath: str = "optimized.xyz",
+    output_filepath: str = "optimized.extxyz",
     output_format: Optional[str] = None,
     calculator_name: str = "nequix",
     max_steps: int = 50,
@@ -216,7 +216,7 @@ async def optimize_structure_workflow(
 async def run_md_workflow(
     input_filepath: str,
     input_format: Optional[str] = None,
-    output_trajectory_filepath: str = "md.traj",
+    output_trajectory_filepath: str = "md.extxyz",
     output_format: Optional[str] = None,
     log_filepath: str = "md.log",
     summary_filepath: str = "md_summary.txt",
@@ -307,7 +307,7 @@ async def build_structure(
     pbc: List[bool] = None,
     cell: Optional[List[List[float]]] = None,
     cell_size: Optional[List[float]] = None,
-    output_filepath: str = "structure.xyz",
+    output_filepath: str = "structure.extxyz",
     output_format: Optional[str] = None,
     builder_kwargs: Optional[Dict] = None,
 ) -> Dict:
@@ -354,7 +354,7 @@ async def write_structure_file(
 async def optimize_with_mlip(
     input_filepath: str,
     input_format: Optional[str] = None,
-    output_filepath: str = "optimized.xyz",
+    output_filepath: str = "optimized.extxyz",
     output_format: Optional[str] = None,
     calculator_name: str = "nequix",
     max_steps: int = 50,
