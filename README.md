@@ -27,7 +27,7 @@ Render can run the MCP server directly from this repository.
 
 ### Files used by Render
 - `requirements.txt`: installs this repo and its dependencies.
-- `main.py`: optional entrypoint that starts the MCP server with the correct host/port and SSE transport.
+- `main.py`: optional entrypoint that starts the MCP server with the correct host/port and MCP HTTP transport.
 - `render.yaml`: provides a reproducible Render service definition.
 
 ### render.yaml
@@ -63,23 +63,28 @@ Set these in the Render UI if they were overridden:
 - If logs include `ImportError: cannot import name 'SseServerTransport'`, deploy with updated code that uses `mcp.http_app(..., transport="sse")` and ensure `fastmcp>=2.14.5` is installed.
 
 ### Server URL
-Once running, the SSE endpoint will be:
+Once running, the MCP endpoint will be:
 ```
-https://<render-service-name>.onrender.com/sse
+https://<render-service-name>.onrender.com/
+```
+
+Legacy SSE path compatibility is also exposed at:
+```
+https://<render-service-name>.onrender.com/sse/
 ```
 
 ### Listing on Smithery
-When you list the server on Smithery, use the SSE URL above as the server endpoint and
-set the transport to SSE/HTTP as required by their listing form.
+When you list the server on Smithery, use the root MCP URL (`https://<service>.onrender.com/`) as the server endpoint and
+set the transport to **Streamable HTTP**. The `/sse/` path remains as a compatibility alias (`/sse` redirects to it).
 
 ### Troubleshooting: "Authorization Required" during scan
 If Smithery (or another MCP directory/scanner) shows **"Authorization Required"** for your
-Render deployment, it usually means the scanner is not reaching a publicly accessible SSE endpoint.
+Render deployment, it usually means the scanner is not reaching a publicly accessible MCP endpoint.
 
 Checklist:
 
 1. Use the public service URL (not a dashboard URL), for example:
-   `https://<service-name>.onrender.com/sse`
+   `https://<service-name>.onrender.com/`
 2. In Render, verify the service is a **Web Service** and is publicly reachable.
 3. Make sure no access control layer is enabled in front of the app (for example:
    Render-level protection, Cloudflare Access, OAuth proxy, or Basic Auth middleware).
@@ -87,15 +92,15 @@ Checklist:
    `uvicorn mcp_atomictoolkit.http_app:app --host 0.0.0.0 --port $PORT`
 5. Verify the app responds on Render:
    - `GET /healthz` should return HTTP 200.
-   - `GET /sse` should not redirect to a sign-in page.
+   - `POST /` should not return `405` (this is the Streamable HTTP MCP endpoint).
 6. Provide an MCP server card for auto-scanners:
    - `GET /.well-known/mcp/server-card.json` should return HTTP 200 JSON.
-   - The server card should advertise your public SSE URL.
+   - The server card should advertise your public root MCP URL (`/`).
 
 Quick local check:
 ```bash
 curl -i https://<service-name>.onrender.com/healthz
-curl -i https://<service-name>.onrender.com/sse
+curl -i -X POST https://<service-name>.onrender.com/
 curl -i https://<service-name>.onrender.com/.well-known/mcp/server-card.json
 ```
 
