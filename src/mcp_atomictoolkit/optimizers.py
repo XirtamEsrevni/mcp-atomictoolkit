@@ -1,5 +1,7 @@
 """Structure optimization using MLIPs (Orb and Nequix)."""
 
+import os
+
 from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 
 import numpy as np
@@ -12,6 +14,21 @@ if TYPE_CHECKING:
     from orb_models.forcefield.calculator import ORBCalculator
 
 NEQUIX_DEFAULT_MODEL = "nequix-mp-1"
+NEQUIX_DEFAULT_BACKEND = "jax"
+
+
+def _configure_jax_for_cpu() -> None:
+    """Avoid JAX GPU/TPU plugin probing in CPU-only runtimes."""
+    os.environ.setdefault("JAX_PLATFORMS", "cpu")
+    os.environ.setdefault("JAX_PLATFORM_NAME", "cpu")
+
+
+def _normalize_calculator_name(calculator_name: str) -> str:
+    """Return canonical calculator key, accepting common aliases/typos."""
+    aliases = {
+        "neqix": "nequix",
+    }
+    return aliases.get(calculator_name.lower(), calculator_name.lower())
 
 
 def get_orb_calculator() -> "ORBCalculator":
@@ -26,9 +43,12 @@ def get_orb_calculator() -> "ORBCalculator":
 
 def get_nequix_calculator(
     model_name: str = NEQUIX_DEFAULT_MODEL,
-    backend: str = "jax",
+    backend: str = NEQUIX_DEFAULT_BACKEND,
 ) -> "NequixCalculator":
     """Initialize Nequix calculator on CPU."""
+    if backend == "jax":
+        _configure_jax_for_cpu()
+
     from nequix.calculator import NequixCalculator
 
     return NequixCalculator(
@@ -39,7 +59,7 @@ def get_nequix_calculator(
 
 def get_calculator(calculator_name: str) -> "ORBCalculator | NequixCalculator":
     """Return an ASE calculator for the requested MLIP."""
-    calculator_key = calculator_name.lower()
+    calculator_key = _normalize_calculator_name(calculator_name)
     if calculator_key == "orb":
         return get_orb_calculator()
     if calculator_key == "nequix":
