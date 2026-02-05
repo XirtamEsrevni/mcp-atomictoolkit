@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import mimetypes
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from threading import Lock
@@ -62,7 +63,10 @@ _ALLOWED_SUFFIXES = {
     ".txt",
     ".json",
     ".log",
+    ".html",
 }
+
+_STRUCTURE_SUFFIXES = {".xyz", ".extxyz", ".cif", ".vasp", ".poscar"}
 
 
 def _is_artifact_candidate(value: Any) -> bool:
@@ -104,6 +108,72 @@ def _guess_artifact_type(path: Path) -> str:
     return "file"
 
 
+def _safe_html_id(value: str) -> str:
+    return re.sub(r"[^a-zA-Z0-9_-]", "_", value)
+
+
+def _write_structure_preview_html(structure_path: Path) -> Optional[Path]:
+    """Create an embeddable HTML preview for supported structure files.
+
+    The preview uses 3Dmol.js loaded from CDN and is intentionally self-contained
+    so clients can open the generated artifact directly in a browser.
+    """
+    suffix = structure_path.suffix.lower()
+    if suffix not in _STRUCTURE_SUFFIXES:
+        return None
+
+    parser_hint = {
+        ".xyz": "xyz",
+        ".extxyz": "xyz",
+        ".cif": "cif",
+        ".vasp": "vasp",
+        ".poscar": "vasp",
+    }[suffix]
+    html_path = structure_path.with_suffix(f"{suffix}.preview.html")
+    container_id = _safe_html_id(f"viewer_{structure_path.stem}")
+    structure_url = structure_path.name
+
+    html = f"""<!DOCTYPE html>
+<html lang=\"en\">
+<head>
+  <meta charset=\"utf-8\" />
+  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
+  <title>Structure Preview - {structure_path.name}</title>
+  <script src=\"https://3Dmol.org/build/3Dmol-min.js\"></script>
+  <style>
+    body {{ font-family: Arial, sans-serif; margin: 1rem; }}
+    .viewer {{ width: 100%; height: 78vh; border: 1px solid #ddd; border-radius: 8px; }}
+    .meta {{ margin-bottom: 0.75rem; }}
+  </style>
+</head>
+<body>
+  <div class=\"meta\"><strong>{structure_path.name}</strong> (format: {suffix[1:]})</div>
+  <div id=\"{container_id}\" class=\"viewer\"></div>
+  <script>
+    (async () => {{
+      const response = await fetch(\"{structure_url}\");
+      if (!response.ok) throw new Error(`Failed to fetch structure file: ${{response.status}}`);
+      const data = await response.text();
+
+      const viewer = $3Dmol.createViewer(document.getElementById(\"{container_id}\"), {{
+        backgroundColor: \"white\"
+      }});
+      viewer.addModel(data, \"{parser_hint}\");
+      viewer.setStyle({{}}, {{stick: {{}}, sphere: {{scale: 0.3}}}});
+      viewer.zoomTo();
+      viewer.render();
+    }})().catch((error) => {{
+      const target = document.getElementById(\"{container_id}\");
+      target.innerHTML = `<pre style=\"padding:1rem;color:#b00\">${{error}}</pre>`;
+    }});
+  </script>
+</body>
+</html>
+"""
+    html_path.write_text(html, encoding="utf-8")
+    return html_path
+
+
 def with_downloadable_artifacts(result: Dict[str, Any]) -> Dict[str, Any]:
     """Augment tool output with download URLs for generated files."""
     artifacts: List[Dict[str, Any]] = []
@@ -127,6 +197,21 @@ def with_downloadable_artifacts(result: Dict[str, Any]) -> Dict[str, Any]:
                 "download_url": f"{base_url}{rel_url}" if base_url else rel_url,
             }
         )
+
+        preview_html = _write_structure_preview_html(record.filepath)
+        if preview_html and preview_html.exists():
+            preview_record = artifact_store.register(preview_html)
+            preview_rel_url = f"/artifacts/{preview_record.artifact_id}/{preview_record.filepath.name}"
+            artifacts.append(
+                {
+                    "label": f"{label}_preview_html",
+                    "id": preview_record.artifact_id,
+                    "artifact_type": "html_preview",
+                    "mimeType": "text/html",
+                    "filepath": str(preview_record.filepath),
+                    "download_url": f"{base_url}{preview_rel_url}" if base_url else preview_rel_url,
+                }
+            )
 
     if not artifacts:
         return result

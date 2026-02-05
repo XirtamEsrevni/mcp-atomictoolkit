@@ -64,7 +64,7 @@ Set these in the Render UI if they were overridden:
 
 
 ### Downloadable artifacts (structures, plots, tables)
-All tools now return an `artifacts` list when output files are created (for example: `extxyz`, `traj`, `cif`, `png`, `svg`, `eps`, `csv`, `dat`). Each artifact includes a `download_url` that can be opened directly in Cursor/Claude clients without embedding binary data in chat context.
+All tools now return an `artifacts` list when output files are created (for example: `extxyz`, `traj`, `cif`, `png`, `svg`, `eps`, `csv`, `dat`). Each artifact includes a `download_url` that can be opened directly in Cursor/Claude clients without embedding binary data in chat context. For structure outputs (`xyz`, `extxyz`, `cif`, `vasp`, `poscar`), the server also emits a companion `html_preview` artifact that opens an interactive 3D browser view (3Dmol.js) of the structure.
 
 - Default URL shape: `/artifacts/<artifact_id>/<filename>`
 - Public absolute URLs: set `ARTIFACT_BASE_URL` (or `PUBLIC_BASE_URL`) to your Render URL, e.g. `https://<service>.onrender.com`
