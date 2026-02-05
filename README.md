@@ -60,6 +60,7 @@ Set these in the Render UI if they were overridden:
 - **Build Command**: `pip install -r requirements.txt`
 - **Start Command**: `uvicorn mcp_atomictoolkit.http_app:app --host 0.0.0.0 --port $PORT`
 - **Health Check Path**: `/healthz`
+- If logs include `ImportError: cannot import name 'SseServerTransport'`, deploy with updated code that uses `mcp.http_app(..., transport="sse")` and ensure `fastmcp>=2.14.5` is installed.
 
 ### Server URL
 Once running, the SSE endpoint will be:
