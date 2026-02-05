@@ -5,7 +5,7 @@ from starlette.requests import Request
 from starlette.responses import FileResponse, JSONResponse, RedirectResponse
 from starlette.routing import Mount, Route
 
-from mcp_atomictoolkit.artifact_store import artifact_store
+from mcp_atomictoolkit.artifact_store import artifact_store, reset_request_base_url, set_request_base_url
 from mcp_atomictoolkit.mcp_server import mcp
 
 
@@ -21,6 +21,36 @@ class _PathRewriteApp:
         rewritten_scope["path"] = self.target_path
         rewritten_scope["raw_path"] = self.target_path.encode("utf-8")
         await self.app(rewritten_scope, receive, send)
+
+
+class _ArtifactBaseUrlContextApp:
+    """ASGI adapter that sets request-scoped artifact base URLs."""
+
+    def __init__(self, app) -> None:
+        self.app = app
+        self.lifespan = getattr(app, "lifespan", None)
+
+    async def __call__(self, scope, receive, send) -> None:
+        if scope.get("type") != "http":
+            await self.app(scope, receive, send)
+            return
+
+        headers = {k.decode("latin-1").lower(): v.decode("latin-1") for k, v in scope.get("headers", [])}
+        forwarded_proto = headers.get("x-forwarded-proto")
+        forwarded_host = headers.get("x-forwarded-host")
+
+        if forwarded_proto and forwarded_host:
+            base_url = f"{forwarded_proto}://{forwarded_host}"
+        else:
+            host = headers.get("host", "localhost")
+            scheme = scope.get("scheme", "http")
+            base_url = f"{scheme}://{host}"
+
+        token = set_request_base_url(base_url)
+        try:
+            await self.app(scope, receive, send)
+        finally:
+            reset_request_base_url(token)
 
 
 class _AcceptHeaderCompatApp:
@@ -63,12 +93,14 @@ class _AcceptHeaderCompatApp:
 
 
 # Primary MCP endpoint expected by Smithery and most registries.
-_mcp_root_app = _AcceptHeaderCompatApp(
-    mcp.http_app(
-        path="/",
-        transport="streamable-http",
-        json_response=True,
-        stateless_http=True,
+_mcp_root_app = _ArtifactBaseUrlContextApp(
+    _AcceptHeaderCompatApp(
+        mcp.http_app(
+            path="/",
+            transport="streamable-http",
+            json_response=True,
+            stateless_http=True,
+        )
     )
 )
 
@@ -123,8 +155,6 @@ async def handle_server_card(request: Request) -> JSONResponse:
             ],
         }
     )
-
-
 
 
 async def handle_artifact_download(request: Request):
