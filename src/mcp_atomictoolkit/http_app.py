@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from starlette.applications import Starlette
 from starlette.requests import Request
-from starlette.responses import JSONResponse, RedirectResponse
+from starlette.responses import FileResponse, JSONResponse, RedirectResponse
 from starlette.routing import Mount, Route
 
+from mcp_atomictoolkit.artifact_store import artifact_store
 from mcp_atomictoolkit.mcp_server import mcp
 
 
@@ -112,6 +113,21 @@ async def handle_server_card(request: Request) -> JSONResponse:
     )
 
 
+
+
+async def handle_artifact_download(request: Request):
+    """Serve generated artifacts as downloadable files."""
+    artifact_id = request.path_params["artifact_id"]
+    record = artifact_store.get(artifact_id)
+    if record is None or not record.filepath.exists():
+        return JSONResponse({"error": "artifact_not_found", "artifact_id": artifact_id}, status_code=404)
+
+    return FileResponse(
+        path=record.filepath,
+        filename=record.filepath.name,
+        content_disposition_type="attachment",
+    )
+
 async def handle_sse_no_slash(request: Request):
     """Normalize /sse -> /sse/ so the mounted compatibility app handles it."""
     return RedirectResponse(url="/sse/", status_code=307)
@@ -121,6 +137,7 @@ app = Starlette(
     routes=[
         Route("/healthz", handle_healthz),
         Route("/.well-known/mcp/server-card.json", handle_server_card),
+        Route("/artifacts/{artifact_id:str}/{filename:str}", handle_artifact_download),
         Route("/sse", handle_sse_no_slash, methods=["GET", "HEAD", "POST", "DELETE"]),
         Mount("/sse", app=_PathRewriteApp(_mcp_root_app, target_path="/")),
         Mount("/", app=_mcp_root_app),

@@ -3,6 +3,7 @@ from time import perf_counter
 from typing import Any, Callable, Dict, List, Optional
 from fastmcp import FastMCP
 
+from mcp_atomictoolkit.artifact_store import with_downloadable_artifacts
 from mcp_atomictoolkit.workflows.core import (
     analyze_structure_workflow as analyze_structure_workflow_impl,
     analyze_trajectory_workflow as analyze_trajectory_workflow_impl,
@@ -55,7 +56,7 @@ def _run_tool(tool_name: str, impl: Callable[..., Dict], **kwargs: Any) -> Dict:
 
     elapsed_ms = (perf_counter() - start) * 1000
     logger.info("Tool %s succeeded in %.1f ms", tool_name, elapsed_ms)
-    return result
+    return with_downloadable_artifacts(result)
 
 
 @mcp.tool()
@@ -365,6 +366,12 @@ async def optimize_with_mlip(
         fmax=fmax,
         constraints=constraints,
     )
+
+
+@mcp.tool()
+async def create_download_artifact(filepath: str) -> Dict:
+    """Create a downloadable artifact URL for an existing file path."""
+    return _run_tool("create_download_artifact", lambda filepath: {"filepath": filepath}, filepath=filepath)
 
 
 if __name__ == "__main__":
