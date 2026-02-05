@@ -158,16 +158,18 @@ async def handle_server_card(request: Request) -> JSONResponse:
 
 
 async def handle_artifact_download(request: Request):
-    """Serve generated artifacts as downloadable files."""
+    """Serve generated artifacts with disposition based on media type."""
     artifact_id = request.path_params["artifact_id"]
     record = artifact_store.get(artifact_id)
     if record is None or not record.filepath.exists():
         return JSONResponse({"error": "artifact_not_found", "artifact_id": artifact_id}, status_code=404)
 
+    is_html_preview = record.filepath.suffix.lower() == ".html"
     return FileResponse(
         path=record.filepath,
         filename=record.filepath.name,
-        content_disposition_type="attachment",
+        content_disposition_type="inline" if is_html_preview else "attachment",
+        media_type="text/html; charset=utf-8" if is_html_preview else None,
     )
 
 async def handle_sse_no_slash(request: Request):

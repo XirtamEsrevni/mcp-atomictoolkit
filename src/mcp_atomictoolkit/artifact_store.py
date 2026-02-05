@@ -3,6 +3,7 @@ from __future__ import annotations
 import mimetypes
 import os
 import re
+import json
 from contextvars import ContextVar, Token
 from dataclasses import dataclass
 from pathlib import Path
@@ -128,7 +129,7 @@ def _safe_html_id(value: str) -> str:
     return re.sub(r"[^a-zA-Z0-9_-]", "_", value)
 
 
-def _write_structure_preview_html(structure_path: Path) -> Optional[Path]:
+def _write_structure_preview_html(structure_path: Path, structure_url: str) -> Optional[Path]:
     """Create an embeddable HTML preview for supported structure files.
 
     The preview uses 3Dmol.js loaded from CDN and is intentionally self-contained
@@ -147,7 +148,7 @@ def _write_structure_preview_html(structure_path: Path) -> Optional[Path]:
     }[suffix]
     html_path = structure_path.with_suffix(f"{suffix}.preview.html")
     container_id = _safe_html_id(f"viewer_{structure_path.stem}")
-    structure_url = structure_path.name
+    structure_url_literal = json.dumps(structure_url)
 
     html = f"""<!DOCTYPE html>
 <html lang=\"en\">
@@ -167,7 +168,7 @@ def _write_structure_preview_html(structure_path: Path) -> Optional[Path]:
   <div id=\"{container_id}\" class=\"viewer\"></div>
   <script>
     (async () => {{
-      const response = await fetch(\"{structure_url}\");
+      const response = await fetch({structure_url_literal});
       if (!response.ok) throw new Error(`Failed to fetch structure file: ${{response.status}}`);
       const data = await response.text();
 
@@ -214,7 +215,7 @@ def with_downloadable_artifacts(result: Dict[str, Any]) -> Dict[str, Any]:
             }
         )
 
-        preview_html = _write_structure_preview_html(record.filepath)
+        preview_html = _write_structure_preview_html(record.filepath, rel_url)
         if preview_html and preview_html.exists():
             preview_record = artifact_store.register(preview_html)
             preview_rel_url = f"/artifacts/{preview_record.artifact_id}/{preview_record.filepath.name}"
