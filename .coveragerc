@@ -1,0 +1,15 @@
+[run]
+branch = True
+source =
+    src/mcp_atomictoolkit
+omit =
+    src/mcp_atomictoolkit/artifact_store.py
+    src/mcp_atomictoolkit/http_app.py
+    src/mcp_atomictoolkit/mcp_server.py
+    src/mcp_atomictoolkit/md_runner.py
+    src/mcp_atomictoolkit/optimizers.py
+    src/mcp_atomictoolkit/workflows/*
+
+[report]
+show_missing = True
+skip_empty = True
