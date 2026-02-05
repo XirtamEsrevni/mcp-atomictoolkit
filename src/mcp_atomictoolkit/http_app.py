@@ -23,7 +23,11 @@ class _PathRewriteApp:
 
 
 # Primary MCP endpoint expected by Smithery and most registries.
-_mcp_root_app = mcp.http_app(path="/", transport="streamable-http")
+_mcp_root_app = mcp.http_app(
+    path="/",
+    transport="streamable-http",
+    json_response=True,
+)
 
 
 def _public_base_url(request: Request) -> str:
@@ -47,6 +51,11 @@ async def handle_server_card(request: Request) -> JSONResponse:
             "name": "atomictoolkit",
             "description": "Atomistic simulation MCP server powered by ASE and MLIPs.",
             "version": "0.1.0",
+            "capabilities": {
+                "tools": {"listChanged": True},
+                "prompts": {"listChanged": True},
+                "resources": {"listChanged": True, "subscribe": False},
+            },
             "transports": [
                 {
                     "type": "streamable-http",
