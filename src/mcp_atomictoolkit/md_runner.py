@@ -112,7 +112,7 @@ def _select_integrator(
 def run_md(
     input_filepath: str,
     input_format: Optional[str] = None,
-    output_trajectory_filepath: str = "md.traj",
+    output_trajectory_filepath: str = "md.extxyz",
     output_format: Optional[str] = None,
     log_filepath: str = "md.log",
     summary_filepath: str = "md_summary.txt",
@@ -162,7 +162,7 @@ def run_md(
 
     trajectory_path = Path(output_trajectory_filepath)
     trajectory_path.parent.mkdir(parents=True, exist_ok=True)
-    fmt = output_format or trajectory_path.suffix.lstrip(".") or "traj"
+    fmt = output_format or trajectory_path.suffix.lstrip(".") or "extxyz"
     _attach_trajectory_writer(
         md,
         atoms,

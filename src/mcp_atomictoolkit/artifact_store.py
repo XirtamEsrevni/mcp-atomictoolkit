@@ -168,13 +168,23 @@ def _write_structure_preview_html(structure_path: Path, structure_url: str) -> O
   <div id=\"{container_id}\" class=\"viewer\"></div>
   <script>
     (async () => {{
+      const container = document.getElementById(\"{container_id}\");
+      if (!container) throw new Error(\"Viewer container not found\");
+
+      const canvas = document.createElement(\"canvas\");
+      const gl = canvas.getContext(\"webgl\") || canvas.getContext(\"experimental-webgl\");
+      if (!gl) {{
+        throw new Error(\"WebGL is unavailable in this environment, so the interactive viewer cannot be created.\");
+      }}
+
       const response = await fetch({structure_url_literal});
       if (!response.ok) throw new Error(`Failed to fetch structure file: ${{response.status}}`);
       const data = await response.text();
 
-      const viewer = $3Dmol.createViewer(document.getElementById(\"{container_id}\"), {{
+      const viewer = $3Dmol.createViewer(container, {{
         backgroundColor: \"white\"
       }});
+      if (!viewer) throw new Error(\"Failed to initialize 3Dmol viewer\");
       viewer.addModel(data, \"{parser_hint}\");
       viewer.setStyle({{}}, {{stick: {{}}, sphere: {{scale: 0.3}}}});
       viewer.zoomTo();
