@@ -5,7 +5,7 @@ from __future__ import annotations
 import csv
 import json
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -68,6 +68,7 @@ def analyze_trajectory(
     rdf_max: float = 10.0,
     rdf_bins: int = 200,
     rdf_stride: int = 1,
+    plot_formats: Optional[Sequence[str]] = None,
 ) -> Dict:
     """Analyze trajectory with MSD, RDF vs time, and thermodynamic stats."""
     frames = _read_trajectory(filepath, format)
@@ -108,14 +109,19 @@ def analyze_trajectory(
     msd_csv = output_path / "msd.csv"
     _write_csv(msd_rows, ["time_fs", "msd_A2"], msd_csv)
 
-    msd_plot = output_path / "msd.png"
+    requested_plot_formats = [fmt.lower() for fmt in (plot_formats or ["png"]) ]
+
+    msd_plots: Dict[str, str] = {}
     plt.figure()
     plt.plot([row[0] for row in msd_rows], msd_values, color="purple")
     plt.xlabel("Time (fs)")
     plt.ylabel("MSD (Å$^2$)")
     plt.title("Mean Squared Displacement")
     plt.tight_layout()
-    plt.savefig(msd_plot)
+    for fmt in requested_plot_formats:
+        msd_plot = output_path / f"msd.{fmt}"
+        plt.savefig(msd_plot)
+        msd_plots[f"msd_plot_{fmt}"] = str(msd_plot.absolute())
     plt.close()
 
     rdf_frames = []
@@ -137,7 +143,7 @@ def analyze_trajectory(
             rdf_rows.append([frame["time_fs"], rv, gv])
     _write_csv(rdf_rows, ["time_fs", "r", "g_r"], rdf_time_csv)
 
-    rdf_plot = output_path / "rdf_time.png"
+    rdf_plots: Dict[str, str] = {}
     rdf_matrix = np.array([frame["g_r"] for frame in rdf_frames])
     plt.figure()
     if rdf_matrix.size > 0:
@@ -153,7 +159,10 @@ def analyze_trajectory(
         plt.ylabel("Time (fs)")
         plt.title("RDF vs time")
     plt.tight_layout()
-    plt.savefig(rdf_plot)
+    for fmt in requested_plot_formats:
+        rdf_plot = output_path / f"rdf_time.{fmt}"
+        plt.savefig(rdf_plot)
+        rdf_plots[f"rdf_time_plot_{fmt}"] = str(rdf_plot.absolute())
     plt.close()
 
     thermo_rows = []
@@ -169,7 +178,7 @@ def analyze_trajectory(
         thermo_csv,
     )
 
-    thermo_plot = output_path / "thermo.png"
+    thermo_plots: Dict[str, str] = {}
     plt.figure()
     plt.plot([row[0] for row in thermo_rows], temperatures, label="Temperature (K)")
     plt.plot([row[0] for row in thermo_rows], potential_energies, label="Potential (eV)")
@@ -177,7 +186,10 @@ def analyze_trajectory(
     plt.legend()
     plt.title("Thermodynamic time series")
     plt.tight_layout()
-    plt.savefig(thermo_plot)
+    for fmt in requested_plot_formats:
+        thermo_plot = output_path / f"thermo.{fmt}"
+        plt.savefig(thermo_plot)
+        thermo_plots[f"thermo_plot_{fmt}"] = str(thermo_plot.absolute())
     plt.close()
 
     summary = {
@@ -196,6 +208,7 @@ def analyze_trajectory(
             "min": float(np.nanmin(potential_energies)),
             "max": float(np.nanmax(potential_energies)),
         },
+        "plot_formats": requested_plot_formats,
     }
 
     summary_path = output_path / "trajectory_summary.json"
@@ -209,12 +222,12 @@ def analyze_trajectory(
         "outputs": {
             "summary_json": str(summary_path.absolute()),
             "msd_csv": str(msd_csv.absolute()),
-            "msd_plot": str(msd_plot.absolute()),
             "rdf_time_csv": str(rdf_time_csv.absolute()),
             "rdf_time_json": str(rdf_json.absolute()),
-            "rdf_time_plot": str(rdf_plot.absolute()),
             "thermo_csv": str(thermo_csv.absolute()),
-            "thermo_plot": str(thermo_plot.absolute()),
+            **msd_plots,
+            **rdf_plots,
+            **thermo_plots,
         },
         "notes": "Computed MSD, RDF vs time, and temperature/energy statistics.",
     }

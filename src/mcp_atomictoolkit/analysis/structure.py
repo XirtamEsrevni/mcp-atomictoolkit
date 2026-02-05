@@ -5,7 +5,7 @@ from __future__ import annotations
 import csv
 import json
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -78,6 +78,7 @@ def analyze_structure(
     rdf_bins: int = 200,
     coordination_cutoff: Optional[float] = None,
     coordination_factor: float = 1.2,
+    plot_formats: Optional[Sequence[str]] = None,
 ) -> Dict:
     """Analyze a structure file and write summary artifacts to disk."""
     atoms = read_structure(filepath, format)
@@ -90,14 +91,18 @@ def analyze_structure(
     rdf_csv = output_path / "rdf.csv"
     _write_csv([[float(rv), float(gv)] for rv, gv in zip(r, g_r)], ["r", "g_r"], rdf_csv)
 
-    rdf_plot = output_path / "rdf.png"
+    requested_plot_formats = [fmt.lower() for fmt in (plot_formats or ["png"]) ]
+    rdf_plots: Dict[str, str] = {}
     plt.figure()
     plt.plot(r, g_r, color="navy")
     plt.xlabel("r (Å)")
     plt.ylabel("g(r)")
     plt.title("Radial Distribution Function")
     plt.tight_layout()
-    plt.savefig(rdf_plot)
+    for fmt in requested_plot_formats:
+        rdf_plot = output_path / f"rdf.{fmt}"
+        plt.savefig(rdf_plot)
+        rdf_plots[f"rdf_plot_{fmt}"] = str(rdf_plot.absolute())
     plt.close()
 
     coordination, coordination_by_element = _coordination_numbers(
@@ -111,14 +116,17 @@ def analyze_structure(
         coordination_csv,
     )
 
-    coordination_plot = output_path / "coordination_hist.png"
+    coordination_plots: Dict[str, str] = {}
     plt.figure()
     plt.hist(coordination, bins=max(5, int(np.sqrt(len(coordination)))) or 5)
     plt.xlabel("Coordination number")
     plt.ylabel("Count")
     plt.title("Coordination number distribution")
     plt.tight_layout()
-    plt.savefig(coordination_plot)
+    for fmt in requested_plot_formats:
+        coordination_plot = output_path / f"coordination_hist.{fmt}"
+        plt.savefig(coordination_plot)
+        coordination_plots[f"coordination_plot_{fmt}"] = str(coordination_plot.absolute())
     plt.close()
 
     summary = {
@@ -140,6 +148,7 @@ def analyze_structure(
             "average": float(np.mean(coordination)) if coordination else 0.0,
             "by_element": coordination_by_element,
         },
+        "plot_formats": requested_plot_formats,
     }
 
     summary_path = output_path / "structure_summary.json"
@@ -150,9 +159,9 @@ def analyze_structure(
         "outputs": {
             "summary_json": str(summary_path.absolute()),
             "rdf_csv": str(rdf_csv.absolute()),
-            "rdf_plot": str(rdf_plot.absolute()),
             "coordination_csv": str(coordination_csv.absolute()),
-            "coordination_plot": str(coordination_plot.absolute()),
+            **rdf_plots,
+            **coordination_plots,
         },
         "notes": "Computed symmetry metadata, RDF, and coordination statistics.",
     }
