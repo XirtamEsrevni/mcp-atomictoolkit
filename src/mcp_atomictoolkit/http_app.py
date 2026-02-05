@@ -27,6 +27,7 @@ _mcp_root_app = mcp.http_app(
     path="/",
     transport="streamable-http",
     json_response=True,
+    stateless_http=True,
 )
 
 
