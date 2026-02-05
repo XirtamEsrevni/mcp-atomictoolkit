@@ -58,18 +58,25 @@ class MDSummary:
 
 
 def _attach_trajectory_writer(
-    atoms: Atoms, trajectory_path: Path, fmt: str, interval: int
+    md,
+    atoms: Atoms,
+    trajectory_path: Path,
+    fmt: str,
+    interval: int,
 ) -> None:
     """Attach a trajectory writer to the MD run."""
     if fmt == "traj":
         traj = Trajectory(str(trajectory_path), "w", atoms)
-        atoms.attach(traj.write, interval=interval)
+        md.attach(traj.write, interval=interval)
         return
+
+    if trajectory_path.exists():
+        trajectory_path.unlink()
 
     def _write_extxyz():
         write(str(trajectory_path), atoms, format=fmt, append=True)
 
-    atoms.attach(_write_extxyz, interval=interval)
+    md.attach(_write_extxyz, interval=interval)
 
 
 def _initialize_velocities(atoms: Atoms, temperature_K: float) -> None:
@@ -156,7 +163,13 @@ def run_md(
     trajectory_path = Path(output_trajectory_filepath)
     trajectory_path.parent.mkdir(parents=True, exist_ok=True)
     fmt = output_format or trajectory_path.suffix.lstrip(".") or "traj"
-    _attach_trajectory_writer(atoms, trajectory_path, fmt, trajectory_interval)
+    _attach_trajectory_writer(
+        md,
+        atoms,
+        trajectory_path,
+        fmt,
+        trajectory_interval,
+    )
 
     log_path = Path(log_filepath)
     log_path.parent.mkdir(parents=True, exist_ok=True)

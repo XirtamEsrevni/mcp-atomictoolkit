@@ -5,7 +5,7 @@ from __future__ import annotations
 import csv
 import json
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Sequence
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -50,6 +50,7 @@ def analyze_vacf(
     output_dir: str = "analysis_outputs/autocorrelation",
     timestep_fs: float = 1.0,
     max_lag: Optional[int] = None,
+    plot_formats: Optional[Sequence[str]] = None,
 ) -> Dict:
     """Compute VACF and diffusion coefficients from a trajectory."""
     frames = _read_trajectory(filepath, format)
@@ -87,14 +88,19 @@ def analyze_vacf(
         vacf_csv,
     )
 
-    vacf_plot = output_path / "vacf.png"
+    requested_plot_formats = [fmt.lower() for fmt in (plot_formats or ["png"]) ]
+
+    vacf_plots: Dict[str, str] = {}
     plt.figure()
     plt.plot(time_fs, vacf_norm, color="teal")
     plt.xlabel("Time (fs)")
     plt.ylabel("Normalized VACF")
     plt.title("Velocity autocorrelation function")
     plt.tight_layout()
-    plt.savefig(vacf_plot)
+    for fmt in requested_plot_formats:
+        vacf_plot = output_path / f"vacf.{fmt}"
+        plt.savefig(vacf_plot)
+        vacf_plots[f"vacf_plot_{fmt}"] = str(vacf_plot.absolute())
     plt.close()
 
     diffusion_csv = output_path / "diffusion.csv"
@@ -104,14 +110,17 @@ def analyze_vacf(
         diffusion_csv,
     )
 
-    diffusion_plot = output_path / "diffusion.png"
+    diffusion_plots: Dict[str, str] = {}
     plt.figure()
     plt.plot(time_fs, diffusion, color="darkorange")
     plt.xlabel("Time (fs)")
     plt.ylabel("D (Å$^2$/fs)")
     plt.title("Diffusion coefficient (Green-Kubo)")
     plt.tight_layout()
-    plt.savefig(diffusion_plot)
+    for fmt in requested_plot_formats:
+        diffusion_plot = output_path / f"diffusion.{fmt}"
+        plt.savefig(diffusion_plot)
+        diffusion_plots[f"diffusion_plot_{fmt}"] = str(diffusion_plot.absolute())
     plt.close()
 
     summary = {
@@ -121,6 +130,7 @@ def analyze_vacf(
         "timestep_fs": timestep_fs,
         "vacf_initial": float(vacf[0]),
         "diffusion_final_A2_per_fs": float(diffusion[-1]) if diffusion.size else 0.0,
+        "plot_formats": requested_plot_formats,
     }
 
     summary_path = output_path / "vacf_summary.json"
@@ -131,9 +141,9 @@ def analyze_vacf(
         "outputs": {
             "summary_json": str(summary_path.absolute()),
             "vacf_csv": str(vacf_csv.absolute()),
-            "vacf_plot": str(vacf_plot.absolute()),
             "diffusion_csv": str(diffusion_csv.absolute()),
-            "diffusion_plot": str(diffusion_plot.absolute()),
+            **vacf_plots,
+            **diffusion_plots,
         },
         "notes": "Computed VACF and diffusion coefficient using Green-Kubo integration.",
     }

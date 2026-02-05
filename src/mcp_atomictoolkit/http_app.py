@@ -92,12 +92,24 @@ async def handle_server_card(request: Request) -> JSONResponse:
     return JSONResponse(
         {
             "name": "atomictoolkit",
-            "description": "Atomistic simulation MCP server powered by ASE and MLIPs.",
+            "displayName": "Atomistic Toolkit MCP",
+            "description": "MCP server for atomistic structure generation, analysis, optimization, and molecular dynamics using ASE, pymatgen, Nequix, and Orb.",
             "version": "0.1.0",
+            "homepage": base_url,
+            "documentationUrl": f"{base_url}/.well-known/mcp/server-card.json",
+            "defaultTransport": {"type": "streamable-http", "url": f"{base_url}/"},
             "capabilities": {
                 "tools": {"listChanged": True},
                 "prompts": {"listChanged": True},
                 "resources": {"listChanged": True, "subscribe": False},
+            },
+            "tooling": {
+                "domains": ["materials-science", "atomistic-simulation"],
+                "artifactDownloadPath": f"{base_url}/artifacts/{{artifact_id}}/{{filename}}",
+                "artifactFormats": [
+                    "xyz", "extxyz", "traj", "cif", "vasp", "poscar",
+                    "png", "svg", "eps", "pdf", "csv", "dat", "txt", "json", "log"
+                ],
             },
             "transports": [
                 {

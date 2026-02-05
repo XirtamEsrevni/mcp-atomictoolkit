@@ -64,6 +64,7 @@ def analyze_structure_workflow(
     rdf_bins: int = 200,
     coordination_cutoff: Optional[float] = None,
     coordination_factor: float = 1.2,
+    plot_formats: Optional[Sequence[str]] = None,
 ) -> Dict:
     """Analyze a structure file and return metadata and analysis artifacts."""
     analysis = analyze_structure(
@@ -74,6 +75,7 @@ def analyze_structure_workflow(
         rdf_bins=rdf_bins,
         coordination_cutoff=coordination_cutoff,
         coordination_factor=coordination_factor,
+        plot_formats=plot_formats,
     )
     structure = read_structure(filepath, format)
     return {
@@ -176,6 +178,7 @@ def analyze_trajectory_workflow(
     rdf_max: float = 10.0,
     rdf_bins: int = 200,
     rdf_stride: int = 1,
+    plot_formats: Optional[Sequence[str]] = None,
 ) -> Dict:
     """Analyze a trajectory and return analysis artifacts."""
     return analyze_trajectory(
@@ -186,6 +189,7 @@ def analyze_trajectory_workflow(
         rdf_max=rdf_max,
         rdf_bins=rdf_bins,
         rdf_stride=rdf_stride,
+        plot_formats=plot_formats,
     )
 
 
@@ -195,6 +199,7 @@ def autocorrelation_workflow(
     output_dir: str = "analysis_outputs/autocorrelation",
     timestep_fs: float = 1.0,
     max_lag: Optional[int] = None,
+    plot_formats: Optional[Sequence[str]] = None,
 ) -> Dict:
     """Compute VACF/autocorrelation analysis and diffusion coefficients."""
     return analyze_vacf(
@@ -203,4 +208,5 @@ def autocorrelation_workflow(
         output_dir=output_dir,
         timestep_fs=timestep_fs,
         max_lag=max_lag,
+        plot_formats=plot_formats,
     )
