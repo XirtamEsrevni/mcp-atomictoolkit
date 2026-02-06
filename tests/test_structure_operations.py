@@ -52,6 +52,12 @@ def test_create_molecule_allows_custom_cell() -> None:
     assert atoms.cell.lengths().tolist() == pytest.approx([10, 10, 10])
 
 
+
+
+def test_create_bulk_hcp_defaults_to_non_cubic_cell() -> None:
+    atoms = create_structure("Cu", structure_type="bulk", crystal_system="hcp", lattice_constant=2.556, c=4.174)
+    assert len(atoms) > 0
+
 def test_manipulate_structure_translate_and_supercell() -> None:
     atoms = Atoms("H", positions=[[0, 0, 0]], cell=[5, 5, 5], pbc=[True, True, True])
     moved = manipulate_structure(atoms.copy(), "translate", vector=[1, 2, 3])
