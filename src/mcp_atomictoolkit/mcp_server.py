@@ -1,4 +1,5 @@
 import logging
+import traceback
 from time import perf_counter
 from typing import Any, Callable, Dict, List, Optional
 from fastmcp import FastMCP
@@ -36,6 +37,42 @@ def _compact_kwargs(kwargs: Dict[str, Any]) -> Dict[str, Any]:
     return compacted
 
 
+def _error_hints(tool_name: str, kwargs: Dict[str, Any], exc: Exception) -> List[str]:
+    hints: List[str] = []
+    msg = str(exc).lower()
+    crystal_system = str(kwargs.get("crystal_system", "")).lower()
+
+    if tool_name == "build_structure_workflow" and crystal_system == "hcp":
+        if "cubic" in msg or kwargs.get("builder_kwargs", {}).get("cubic", None) is not False:
+            hints.append(
+                "hcp is not a cubic lattice. Pass builder_kwargs={'cubic': False} or rely on the default hcp behavior."
+            )
+    if "no such file" in msg or "not found" in msg:
+        hints.append("Verify file paths are correct and that prior workflow steps completed successfully.")
+    if tool_name in {"optimize_structure_workflow", "run_md_workflow", "analyze_trajectory_workflow"}:
+        hints.append("Use returned artifact download_url links for trajectory/log/analysis files instead of regenerating files manually.")
+
+    return hints
+
+
+def _tool_error_response(tool_name: str, exc: Exception, elapsed_ms: float, kwargs: Dict[str, Any]) -> Dict[str, Any]:
+    compact_args = _compact_kwargs(kwargs)
+    response: Dict[str, Any] = {
+        "status": "error",
+        "tool_name": tool_name,
+        "error": {
+            "type": exc.__class__.__name__,
+            "message": str(exc),
+            "elapsed_ms": round(elapsed_ms, 3),
+            "traceback": traceback.format_exc(),
+        },
+        "inputs": compact_args,
+        "hints": _error_hints(tool_name, kwargs, exc),
+        "next_action": "Adjust tool arguments and retry this MCP tool call. Do not replace the workflow with ad-hoc code.",
+    }
+    return response
+
+
 def _run_tool(tool_name: str, impl: Callable[..., Dict], **kwargs: Any) -> Dict:
     start = perf_counter()
     compact_args = _compact_kwargs(kwargs)
@@ -52,7 +89,7 @@ def _run_tool(tool_name: str, impl: Callable[..., Dict], **kwargs: Any) -> Dict:
             exc,
             compact_args,
         )
-        raise
+        return with_downloadable_artifacts(_tool_error_response(tool_name, exc, elapsed_ms, kwargs))
 
     elapsed_ms = (perf_counter() - start) * 1000
     logger.info("Tool %s succeeded in %.1f ms", tool_name, elapsed_ms)
