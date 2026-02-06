@@ -18,9 +18,18 @@ NEQUIX_DEFAULT_BACKEND = "jax"
 
 
 def _configure_jax_for_cpu() -> None:
-    """Avoid JAX GPU/TPU plugin probing in CPU-only runtimes."""
-    os.environ.setdefault("JAX_PLATFORMS", "cpu")
-    os.environ.setdefault("JAX_PLATFORM_NAME", "cpu")
+    """Force JAX/Nequix execution on CPU-only runtimes."""
+    # We intentionally overwrite these values to guarantee CPU execution even
+    # when a hosting environment pre-sets GPU defaults.
+    os.environ["JAX_PLATFORMS"] = "cpu"
+    os.environ["JAX_PLATFORM_NAME"] = "cpu"
+    os.environ["CUDA_VISIBLE_DEVICES"] = ""
+    os.environ["JAX_CUDA_VISIBLE_DEVICES"] = ""
+
+
+# Configure CPU-only defaults as soon as this module is imported so that any
+# later JAX imports (triggered inside Nequix) inherit the safe environment.
+_configure_jax_for_cpu()
 
 
 def _normalize_calculator_name(calculator_name: str) -> str:
