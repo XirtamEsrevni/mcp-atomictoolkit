@@ -134,7 +134,7 @@ def run_md(
         output_format: Trajectory format (optional, inferred from path).
         log_filepath: Path to log file for MD energies/temperature.
         summary_filepath: Path to summary file for MD statistics.
-        calculator_name: Type of MLIP ('nequix' or 'orb').
+        calculator_name: Type of MLIP ('nequix', 'orb', or 'kim').
         integrator: Integrator ('velocityverlet', 'langevin', 'nvt').
         timestep_fs: MD timestep in femtoseconds.
         temperature_K: Target temperature in Kelvin.
@@ -147,7 +147,8 @@ def run_md(
         Dict containing output file paths and summary statistics.
     """
     atoms = read_structure(input_filepath, input_format)
-    atoms.calc = get_calculator(calculator_name)
+    species = sorted(set(atoms.get_chemical_symbols()))
+    atoms.calc = get_calculator(calculator_name, species=species)
 
     _initialize_velocities(atoms, temperature_K)
 

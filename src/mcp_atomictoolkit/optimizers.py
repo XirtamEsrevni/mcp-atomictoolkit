@@ -61,7 +61,7 @@ def optimize_structure(
 
     Args:
         structure: Input structure
-        calculator_name: Type of MLIP ('nequix' or 'orb')
+        calculator_name: Type of MLIP ('nequix', 'orb', or 'kim')
         max_steps: Maximum optimization steps
         fmax: Force convergence criterion
         constraints: Constraint settings (fixed atoms/cell/bonds)
@@ -75,7 +75,8 @@ def optimize_structure(
     apply_constraints(atoms, constraints)
 
     # Set up calculator
-    calculator = get_calculator(calculator_name)
+    species = sorted(set(atoms.get_chemical_symbols()))
+    calculator = get_calculator(calculator_name, species=species)
 
     atoms.calc = calculator
 
