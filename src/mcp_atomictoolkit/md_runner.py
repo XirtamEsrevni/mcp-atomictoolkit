@@ -19,7 +19,7 @@ from ase.md.verlet import VelocityVerlet
 from ase.md.logger import MDLogger
 
 from mcp_atomictoolkit.io_handlers import read_structure
-from mcp_atomictoolkit.optimizers import get_calculator
+from mcp_atomictoolkit.calculators import get_calculator
 
 
 @dataclass

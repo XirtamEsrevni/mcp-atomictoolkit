@@ -9,13 +9,13 @@ def test_configure_jax_for_cpu_overrides_environment(monkeypatch):
     monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "0")
     monkeypatch.setenv("JAX_CUDA_VISIBLE_DEVICES", "0")
 
-    sys.modules.pop("mcp_atomictoolkit.optimizers", None)
-    optimizers = importlib.import_module("mcp_atomictoolkit.optimizers")
+    sys.modules.pop("mcp_atomictoolkit.calculators", None)
+    calculators = importlib.import_module("mcp_atomictoolkit.calculators")
 
-    assert optimizers.os.environ["JAX_PLATFORMS"] == "cpu"
-    assert optimizers.os.environ["JAX_PLATFORM_NAME"] == "cpu"
-    assert optimizers.os.environ["CUDA_VISIBLE_DEVICES"] == ""
-    assert optimizers.os.environ["JAX_CUDA_VISIBLE_DEVICES"] == ""
+    assert calculators.os.environ["JAX_PLATFORMS"] == "cpu"
+    assert calculators.os.environ["JAX_PLATFORM_NAME"] == "cpu"
+    assert calculators.os.environ["CUDA_VISIBLE_DEVICES"] == ""
+    assert calculators.os.environ["JAX_CUDA_VISIBLE_DEVICES"] == ""
 
 
 def test_get_nequix_calculator_enforces_cpu_env(monkeypatch):
@@ -40,14 +40,14 @@ def test_get_nequix_calculator_enforces_cpu_env(monkeypatch):
     monkeypatch.setitem(sys.modules, "nequix", nequix_module)
     monkeypatch.setitem(sys.modules, "nequix.calculator", calculator_module)
 
-    sys.modules.pop("mcp_atomictoolkit.optimizers", None)
-    optimizers = importlib.import_module("mcp_atomictoolkit.optimizers")
+    sys.modules.pop("mcp_atomictoolkit.calculators", None)
+    calculators = importlib.import_module("mcp_atomictoolkit.calculators")
 
-    calculator = optimizers.get_nequix_calculator()
+    calculator = calculators.get_nequix_calculator()
 
     assert isinstance(calculator, DummyNequixCalculator)
     assert calculator.backend == "jax"
-    assert optimizers.os.environ["JAX_PLATFORMS"] == "cpu"
-    assert optimizers.os.environ["JAX_PLATFORM_NAME"] == "cpu"
-    assert optimizers.os.environ["CUDA_VISIBLE_DEVICES"] == ""
-    assert optimizers.os.environ["JAX_CUDA_VISIBLE_DEVICES"] == ""
+    assert calculators.os.environ["JAX_PLATFORMS"] == "cpu"
+    assert calculators.os.environ["JAX_PLATFORM_NAME"] == "cpu"
+    assert calculators.os.environ["CUDA_VISIBLE_DEVICES"] == ""
+    assert calculators.os.environ["JAX_CUDA_VISIBLE_DEVICES"] == ""
