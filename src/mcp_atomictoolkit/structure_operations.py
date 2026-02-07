@@ -69,13 +69,17 @@ def _stack_grains(
     gap: float,
     pbc: Sequence[bool],
 ) -> Atoms:
-    translation = np.zeros(3)
-    translation[axis] = grain_a.cell.lengths()[axis] + gap
+    axis_vector = grain_a.cell.array[axis]
+    axis_length = np.linalg.norm(axis_vector)
+    if axis_length == 0:
+        raise ValueError("Grain cell axis length must be non-zero")
+    axis_unit = axis_vector / axis_length
+    translation = axis_vector + axis_unit * gap
     grain_b = grain_b.copy()
     grain_b.translate(translation)
     combined = grain_a + grain_b
     cell = grain_a.cell.array.copy()
-    cell[axis] = cell[axis] + grain_b.cell.array[axis] + translation[axis]
+    cell[axis] = cell[axis] + grain_b.cell.array[axis] + axis_unit * gap
     combined.set_cell(cell)
     combined.pbc = pbc
     return combined
