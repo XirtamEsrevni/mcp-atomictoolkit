@@ -12,6 +12,9 @@ if TYPE_CHECKING:
 NEQUIX_DEFAULT_MODEL = "nequix-mp-1"
 NEQUIX_DEFAULT_BACKEND = "jax"
 KIM_DEFAULT_MODEL = "LJ_ElliottAkerson_2015_Universal__MO_959249795837_003"
+# Default to the KIM pathway unless callers explicitly request a specific MLIP
+# (including the "orb of nequix" alias used when Orb is deemed superior).
+DEFAULT_CALCULATOR_NAME = "kim"
 
 
 def _configure_jax_for_cpu() -> None:
@@ -31,13 +34,16 @@ _configure_jax_for_cpu()
 
 def _normalize_calculator_name(calculator_name: str) -> str:
     """Return canonical calculator key, accepting common aliases/typos."""
+    normalized = calculator_name.strip().lower()
     aliases = {
         "neqix": "nequix",
+        "orb of nequix": "orb",
+        "orb-of-nequix": "orb",
         "openkim": "kim",
         "kim-model": "kim",
         "kim_model": "kim",
     }
-    return aliases.get(calculator_name.lower(), calculator_name.lower())
+    return aliases.get(normalized, normalized)
 
 
 def get_orb_calculator() -> "ORBCalculator":

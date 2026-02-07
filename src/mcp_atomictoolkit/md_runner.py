@@ -19,7 +19,7 @@ from ase.md.verlet import VelocityVerlet
 from ase.md.logger import MDLogger
 
 from mcp_atomictoolkit.io_handlers import read_structure
-from mcp_atomictoolkit.calculators import get_calculator
+from mcp_atomictoolkit.calculators import DEFAULT_CALCULATOR_NAME, get_calculator
 
 
 @dataclass
@@ -116,7 +116,7 @@ def run_md(
     output_format: Optional[str] = None,
     log_filepath: str = "md.log",
     summary_filepath: str = "md_summary.txt",
-    calculator_name: str = "nequix",
+    calculator_name: str = DEFAULT_CALCULATOR_NAME,
     integrator: str = "velocityverlet",
     timestep_fs: float = 1.0,
     temperature_K: float = 300.0,
@@ -134,7 +134,7 @@ def run_md(
         output_format: Trajectory format (optional, inferred from path).
         log_filepath: Path to log file for MD energies/temperature.
         summary_filepath: Path to summary file for MD statistics.
-        calculator_name: Type of MLIP ('nequix', 'orb', or 'kim').
+        calculator_name: Type of MLIP ('kim', 'nequix', or 'orb'). Defaults to KIM.
         integrator: Integrator ('velocityverlet', 'langevin', 'nvt').
         timestep_fs: MD timestep in femtoseconds.
         temperature_K: Target temperature in Kelvin.

@@ -1,4 +1,4 @@
-"""Structure optimization using MLIPs (Orb and Nequix)."""
+"""Structure optimization using MLIPs (KIM, Orb, and Nequix)."""
 
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -7,7 +7,7 @@ from ase import Atoms
 from ase.constraints import FixAtoms, FixBondLength, FixBondLengths
 from ase.optimize import BFGS
 
-from mcp_atomictoolkit.calculators import get_calculator
+from mcp_atomictoolkit.calculators import DEFAULT_CALCULATOR_NAME, get_calculator
 
 
 def apply_constraints(atoms: Atoms, constraints: Optional[Dict[str, Any]]) -> None:
@@ -51,7 +51,7 @@ def apply_constraints(atoms: Atoms, constraints: Optional[Dict[str, Any]]) -> No
 
 def optimize_structure(
     structure: Atoms,
-    calculator_name: str = "nequix",
+    calculator_name: str = DEFAULT_CALCULATOR_NAME,
     max_steps: int = 50,
     fmax: float = 0.1,
     constraints: Optional[Dict[str, Any]] = None,
@@ -61,7 +61,7 @@ def optimize_structure(
 
     Args:
         structure: Input structure
-        calculator_name: Type of MLIP ('nequix', 'orb', or 'kim')
+        calculator_name: Type of MLIP ('kim', 'nequix', or 'orb'). Defaults to KIM.
         max_steps: Maximum optimization steps
         fmax: Force convergence criterion
         constraints: Constraint settings (fixed atoms/cell/bonds)
