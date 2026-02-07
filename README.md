@@ -1,126 +1,170 @@
-# Atomistic Toolkit MCP Server
+# ⚛️ MCP Atomic Toolkit
+
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![MCP](https://img.shields.io/badge/MCP-Streamable%20HTTP-7A3EFF)](https://modelcontextprotocol.io/)
+[![tests](https://github.com/XirtamEsrevni/mcp-atomictoolkit/actions/workflows/tests.yml/badge.svg)](https://github.com/XirtamEsrevni/mcp-atomictoolkit/actions/workflows/tests.yml)
 
 > [!NOTE]
-> This project is under active development. Not everything is working yet.
+> This project is under active development. Interfaces and behavior may evolve.
 
-An MCP-compatible server providing atomistic simulation capabilities through ASE, pymatgen, and machine learning interatomic potentials (MLIPs).
+A FastMCP server for **atomistic modeling workflows** powered by ASE, pymatgen, and modern ML interatomic potentials.
 
-## Features
-### ASE Tools
-- Structure creation and manipulation
-- Geometry optimization
-- File I/O operations (read/write structures)
+It gives MCP clients a practical toolkit for:
+- building structures,
+- running geometry optimization + molecular dynamics,
+- analyzing structures/trajectories,
+- and downloading generated artifacts (data + plots).
 
-### MLIP calculators
-- Optimization and MD workflows now default to the Nequix calculator on CPU.
-- The default model is the smallest/fastest option (`nequix-mp-1`) using the JAX backend.
+---
 
-Example (standalone ASE usage):
-```python
-from nequix.calculator import NequixCalculator
+## ✨ Why this repo
 
-atoms = ...
-atoms.calc = NequixCalculator("nequix-mp-1", backend="jax")
-```
-## Deploy to Render (Web Service)
-Render can run the MCP server directly from this repository.
+If you need atomistic workflows exposed as MCP tools (instead of hand-wiring scripts), this project gives you:
 
-### Files used by Render
-- `requirements.txt`: installs this repo and its dependencies.
-- `main.py`: optional entrypoint that starts the MCP server with the correct host/port and MCP HTTP transport.
-- `render.yaml`: provides a reproducible Render service definition.
+- **ready-to-call MCP tools** for common simulation tasks,
+- **file-first outputs** that are easy to inspect/reuse,
+- **artifact download URLs** so clients don’t need binary blobs in chat context,
+- **deployment-ready HTTP app** with health and server-card endpoints.
 
-### render.yaml
-The repository includes the `render.yaml` below:
-```yaml
-services:
-  - type: web
-    name: mcp-atomictoolkit
-    env: python
-    plan: free
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn mcp_atomictoolkit.http_app:app --host 0.0.0.0 --port $PORT
-    healthCheckPath: /healthz
-    envVars:
-      - key: PYTHON_VERSION
-        value: "3.13"
-```
+---
 
-### One-time setup
-1. In Render, create a **New Web Service** and connect this GitHub repo.
-2. Render will auto-detect `render.yaml`. If prompted, confirm the build and start commands.
-3. Deploy. Render sets `$PORT` automatically and Uvicorn binds to `0.0.0.0:$PORT`.
-   (`python main.py` is also valid because it reads `$PORT`, but the blueprint defaults to the Uvicorn
-   module invocation.)
+## 🚀 Features
 
-### If Render reports "No open ports detected"
-Ensure the service is using the Render blueprint values so Uvicorn starts the HTTP server.
-Set these in the Render UI if they were overridden:
+- **MCP-native workflows** via FastMCP tools
+- **Structure generation**: bulk, surface, molecule, supercell, amorphous, liquid, bicrystal, polycrystal
+- **Optimization workflows** with MLIPs (`kim` default, `nequix`/`orb` supported)
+- **Molecular dynamics** workflows (Velocity Verlet, Langevin, NVT Berendsen)
+- **Analysis outputs**:
+  - RDF + coordination stats
+  - MSD + thermodynamic trends
+  - VACF + diffusion (Green-Kubo)
+- **Downloadable artifacts** (`xyz`, `extxyz`, `cif`, `traj`, `png`, `svg`, `csv`, `dat`, ...)
+- **Registry-friendly endpoints** (`/healthz`, server card, Streamable HTTP root)
 
-- **Build Command**: `pip install -r requirements.txt`
-- **Start Command**: `uvicorn mcp_atomictoolkit.http_app:app --host 0.0.0.0 --port $PORT`
-- **Health Check Path**: `/healthz`
-- If logs include `ImportError: cannot import name 'SseServerTransport'`, deploy with updated code that uses `mcp.http_app(..., transport="sse")` and ensure `fastmcp>=2.14.5` is installed.
+---
 
+## ⚡ Quick Start
 
-### Downloadable artifacts (structures, plots, tables)
-All tools now return an `artifacts` list when output files are created (for example: `extxyz`, `traj`, `cif`, `png`, `svg`, `eps`, `csv`, `dat`). Each artifact includes a `download_url` that can be opened directly in Cursor/Claude clients without embedding binary data in chat context. For structure outputs (`xyz`, `extxyz`, `cif`, `vasp`, `poscar`), the server also emits a companion `html_preview` artifact that opens an interactive 3D browser view (3Dmol.js) of the structure.
+### 1) Requirements
 
-- Default URL shape: `/artifacts/<artifact_id>/<filename>`
-- Public absolute URLs: set `ARTIFACT_BASE_URL` (or `PUBLIC_BASE_URL`) to your Render URL, e.g. `https://<service>.onrender.com`
-- Downloads are served with attachment headers from the MCP app itself.
+- Python **3.11+**
 
-### Server URL
-Once running, the MCP endpoint will be:
-```
-https://<render-service-name>.onrender.com/
-```
+### 2) Install
 
-Legacy SSE path compatibility is also exposed at:
-```
-https://<render-service-name>.onrender.com/sse/
-```
-
-### Listing on Smithery
-When you list the server on Smithery, use the root MCP URL (`https://<service>.onrender.com/`) as the server endpoint and
-set the transport to **Streamable HTTP**. The `/sse/` path remains as a compatibility alias (`/sse` redirects to it).
-
-### Troubleshooting: "Authorization Required" during scan
-If Smithery (or another MCP directory/scanner) shows **"Authorization Required"** for your
-Render deployment, it usually means the scanner is not reaching a publicly accessible MCP endpoint.
-
-Checklist:
-
-1. Use the public service URL (not a dashboard URL), for example:
-   `https://<service-name>.onrender.com/`
-2. In Render, verify the service is a **Web Service** and is publicly reachable.
-3. Make sure no access control layer is enabled in front of the app (for example:
-   Render-level protection, Cloudflare Access, OAuth proxy, or Basic Auth middleware).
-4. Confirm your start command is exactly:
-   `uvicorn mcp_atomictoolkit.http_app:app --host 0.0.0.0 --port $PORT`
-5. Verify the app responds on Render:
-   - `GET /healthz` should return HTTP 200.
-   - `POST /` should not return `405` (this is the Streamable HTTP MCP endpoint).
-6. Provide an MCP server card for auto-scanners:
-   - `GET /.well-known/mcp/server-card.json` should return HTTP 200 JSON.
-   - The server card should advertise your public root MCP URL (`/`).
-
-Quick local check:
 ```bash
-curl -i https://<service-name>.onrender.com/healthz
-curl -i -X POST https://<service-name>.onrender.com/
-curl -i https://<service-name>.onrender.com/.well-known/mcp/server-card.json
+pip install -r requirements.txt
 ```
 
-If `/sse` returns HTML for a login page or a `401/403`, the scanner will show
-"Authorization Required" until that external auth layer is removed or configured for public access.
-If scanner logs report `Initialization failed with status 404`, it often means the scanner tried
-the wrong path and could not discover your MCP endpoint; serving a valid server card resolves this.
+### 3) Run locally
 
-## Async worker paradigm for long-running tasks
+```bash
+uvicorn mcp_atomictoolkit.http_app:app --host 0.0.0.0 --port 10000
+```
 
-For a detailed design of non-blocking MCP task submission, durable task lifecycle management,
-worker pools, queue semantics, restart recovery, and implementation options (SQLite/Postgres/Redis/Celery/managed jobs),
-see:
+Alternative:
 
-- [`docs/async-worker-paradigm.md`](docs/async-worker-paradigm.md)
+```bash
+python main.py
+```
+
+### 4) Smoke check
+
+```bash
+curl -s http://localhost:10000/healthz
+```
+
+Expected response:
+
+```json
+{"status":"ok"}
+```
+
+---
+
+## 🧰 Tooling Overview
+
+Main MCP tools exposed by the server:
+
+- `build_structure_workflow`
+- `analyze_structure_workflow`
+- `write_structure_workflow`
+- `optimize_structure_workflow`
+- `run_md_workflow`
+- `analyze_trajectory_workflow`
+- `autocorrelation_workflow`
+
+Legacy aliases are also included for backward compatibility.
+
+---
+
+## 🌐 Endpoints
+
+- `POST /` — primary MCP Streamable HTTP endpoint
+- `GET /healthz` — health check
+- `GET /.well-known/mcp/server-card.json` — MCP server card metadata
+- `GET /artifacts/{artifact_id}/{filename}` — artifact download route
+- `/sse/` — compatibility alias path mounted to the MCP app
+
+---
+
+## 📦 Deployment
+
+### Render
+
+`render.yaml` is included and ready to use.
+
+Default start command:
+
+```bash
+uvicorn mcp_atomictoolkit.http_app:app --host 0.0.0.0 --port $PORT
+```
+
+### Docker
+
+```bash
+docker build -t mcp-atomictoolkit .
+docker run --rm -p 7860:7860 mcp-atomictoolkit
+```
+
+---
+
+## 🗂️ Project Structure
+
+```text
+src/mcp_atomictoolkit/
+  mcp_server.py          # FastMCP tool definitions
+  http_app.py            # Starlette app + routing/endpoints
+  workflows/core.py      # High-level workflow orchestration
+  analysis/              # Structure/trajectory/VACF analysis logic
+  structure_operations.py
+  optimizers.py
+  md_runner.py
+  artifact_store.py      # Download artifact registration + URLs
+```
+
+---
+
+## 📈 GitHub Pulse
+
+> Add your repository path in the URLs below to enable live charts.
+
+### Star history
+
+[![Star History Chart](https://api.star-history.com/svg?repos=OWNER/REPO&type=Date)](https://star-history.com/#OWNER/REPO&Date)
+
+---
+
+## 🤝 Contributing
+
+- Keep outputs file-based and artifact-friendly.
+- When adding tools, usually update both:
+  - `workflows/core.py`
+  - `mcp_server.py`
+- Preserve `http_app.py` compatibility behavior unless intentionally changing deployment contracts.
+
+---
+
+## 📄 License
+
+MIT — see `LICENSE`.

@@ -69,13 +69,17 @@ def _stack_grains(
     gap: float,
     pbc: Sequence[bool],
 ) -> Atoms:
-    translation = np.zeros(3)
-    translation[axis] = grain_a.cell.lengths()[axis] + gap
+    axis_vector = grain_a.cell.array[axis]
+    axis_length = np.linalg.norm(axis_vector)
+    if axis_length == 0:
+        raise ValueError("Grain cell axis length must be non-zero")
+    axis_unit = axis_vector / axis_length
+    translation = axis_vector + axis_unit * gap
     grain_b = grain_b.copy()
     grain_b.translate(translation)
     combined = grain_a + grain_b
     cell = grain_a.cell.array.copy()
-    cell[axis] = cell[axis] + grain_b.cell.array[axis] + translation[axis]
+    cell[axis] = cell[axis] + grain_b.cell.array[axis] + axis_unit * gap
     combined.set_cell(cell)
     combined.pbc = pbc
     return combined
@@ -108,9 +112,14 @@ def create_structure(
     Returns:
         ASE Atoms object
     """
+    incompatible_cubic_crystals = {"hcp", "rhombohedral", "trigonal", "hexagonal"}
+    requested_cubic = kwargs.get("cubic")
+    default_cubic = crystal_system.lower() not in incompatible_cubic_crystals
+    use_cubic = default_cubic if requested_cubic is None else bool(requested_cubic)
+
     if structure_type == "bulk":
         atoms = bulk(
-            formula, crystal_system, a=lattice_constant, cubic=kwargs.get("cubic", True)
+            formula, crystal_system, a=lattice_constant, cubic=use_cubic
         )
         atoms.pbc = pbc
     elif structure_type == "molecule":
@@ -161,7 +170,7 @@ def create_structure(
         axis_map = {"x": 0, "y": 1, "z": 2}
         axis = axis_map.get(axis_label, 2)
         grain_a = bulk(
-            formula, crystal_system, a=lattice_constant, cubic=kwargs.get("cubic", True)
+            formula, crystal_system, a=lattice_constant, cubic=use_cubic
         )
         grain_a = grain_a * grain_size
         grain_b = grain_a.copy()
@@ -175,7 +184,7 @@ def create_structure(
         grain_size = kwargs.get("grain_size", (3, 3, 3))
         grid = int(np.ceil(num_grains ** (1 / 3)))
         base = bulk(
-            formula, crystal_system, a=lattice_constant, cubic=kwargs.get("cubic", True)
+            formula, crystal_system, a=lattice_constant, cubic=use_cubic
         )
         grains: List[Atoms] = []
         for idx in range(num_grains):
