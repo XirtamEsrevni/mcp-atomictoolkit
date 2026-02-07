@@ -10,6 +10,7 @@ from ase import Atoms
 from mcp_atomictoolkit.analysis.autocorrelation import analyze_vacf
 from mcp_atomictoolkit.analysis.structure import analyze_structure
 from mcp_atomictoolkit.analysis.trajectory import analyze_trajectory
+from mcp_atomictoolkit.calculators import DEFAULT_CALCULATOR_NAME
 from mcp_atomictoolkit.io_handlers import read_structure, write_structure
 from mcp_atomictoolkit.md_runner import run_md
 from mcp_atomictoolkit.optimizers import optimize_structure
@@ -109,7 +110,7 @@ def optimize_structure_workflow(
     input_format: Optional[str] = None,
     output_filepath: str = "optimized.extxyz",
     output_format: Optional[str] = None,
-    calculator_name: str = "nequix",
+    calculator_name: str = DEFAULT_CALCULATOR_NAME,
     max_steps: int = 50,
     fmax: float = 0.1,
     constraints: Optional[Dict] = None,
@@ -142,7 +143,7 @@ def run_md_workflow(
     output_format: Optional[str] = None,
     log_filepath: str = "md.log",
     summary_filepath: str = "md_summary.txt",
-    calculator_name: str = "nequix",
+    calculator_name: str = DEFAULT_CALCULATOR_NAME,
     integrator: str = "velocityverlet",
     timestep_fs: float = 1.0,
     temperature_K: float = 300.0,

@@ -5,6 +5,7 @@ from typing import Any, Callable, Dict, List, Optional
 from fastmcp import FastMCP
 
 from mcp_atomictoolkit.artifact_store import with_downloadable_artifacts
+from mcp_atomictoolkit.calculators import DEFAULT_CALCULATOR_NAME
 from mcp_atomictoolkit.workflows.core import (
     analyze_structure_workflow as analyze_structure_workflow_impl,
     analyze_trajectory_workflow as analyze_trajectory_workflow_impl,
@@ -215,7 +216,7 @@ async def optimize_structure_workflow(
     input_format: Optional[str] = None,
     output_filepath: str = "optimized.extxyz",
     output_format: Optional[str] = None,
-    calculator_name: str = "nequix",
+    calculator_name: str = DEFAULT_CALCULATOR_NAME,
     max_steps: int = 50,
     fmax: float = 0.1,
     constraints: Optional[Dict] = None,
@@ -227,7 +228,7 @@ async def optimize_structure_workflow(
         input_format: File format (optional)
         output_filepath: Output file path
         output_format: Output file format (optional)
-        calculator_name: Type of MLIP ('nequix' or 'orb')
+        calculator_name: Type of MLIP ('kim', 'nequix', or 'orb'). Defaults to KIM.
         max_steps: Maximum optimization steps
         fmax: Force convergence criterion
         constraints: Constraint settings (fixed atoms/cell/bonds)
@@ -257,7 +258,7 @@ async def run_md_workflow(
     output_format: Optional[str] = None,
     log_filepath: str = "md.log",
     summary_filepath: str = "md_summary.txt",
-    calculator_name: str = "nequix",
+    calculator_name: str = DEFAULT_CALCULATOR_NAME,
     integrator: str = "velocityverlet",
     timestep_fs: float = 1.0,
     temperature_K: float = 300.0,
@@ -393,7 +394,7 @@ async def optimize_with_mlip(
     input_format: Optional[str] = None,
     output_filepath: str = "optimized.extxyz",
     output_format: Optional[str] = None,
-    calculator_name: str = "nequix",
+    calculator_name: str = DEFAULT_CALCULATOR_NAME,
     max_steps: int = 50,
     fmax: float = 0.1,
     constraints: Optional[Dict] = None,
