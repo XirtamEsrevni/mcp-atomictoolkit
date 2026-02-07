@@ -33,7 +33,7 @@ If you need atomistic workflows exposed as MCP tools (instead of hand-wiring scr
 
 - **MCP-native workflows** via FastMCP tools
 - **Structure generation**: bulk, surface, molecule, supercell, amorphous, liquid, bicrystal, polycrystal
-- **Optimization workflows** with MLIPs (`nequix` default, `orb` supported)
+- **Optimization workflows** with MLIPs (`kim` default, `nequix`/`orb` supported)
 - **Molecular dynamics** workflows (Velocity Verlet, Langevin, NVT Berendsen)
 - **Analysis outputs**:
   - RDF + coordination stats

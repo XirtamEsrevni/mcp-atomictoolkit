@@ -1,79 +1,13 @@
-"""Structure optimization using MLIPs (Orb and Nequix)."""
+"""Structure optimization using MLIPs (KIM, Orb, and Nequix)."""
 
-import os
-
-from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 from ase import Atoms
 from ase.constraints import FixAtoms, FixBondLength, FixBondLengths
 from ase.optimize import BFGS
 
-if TYPE_CHECKING:
-    from nequix.calculator import NequixCalculator
-    from orb_models.forcefield.calculator import ORBCalculator
-
-NEQUIX_DEFAULT_MODEL = "nequix-mp-1"
-NEQUIX_DEFAULT_BACKEND = "jax"
-
-
-def _configure_jax_for_cpu() -> None:
-    """Force JAX/Nequix execution on CPU-only runtimes."""
-    # We intentionally overwrite these values to guarantee CPU execution even
-    # when a hosting environment pre-sets GPU defaults.
-    os.environ["JAX_PLATFORMS"] = "cpu"
-    os.environ["JAX_PLATFORM_NAME"] = "cpu"
-    os.environ["CUDA_VISIBLE_DEVICES"] = ""
-    os.environ["JAX_CUDA_VISIBLE_DEVICES"] = ""
-
-
-# Configure CPU-only defaults as soon as this module is imported so that any
-# later JAX imports (triggered inside Nequix) inherit the safe environment.
-_configure_jax_for_cpu()
-
-
-def _normalize_calculator_name(calculator_name: str) -> str:
-    """Return canonical calculator key, accepting common aliases/typos."""
-    aliases = {
-        "neqix": "nequix",
-    }
-    return aliases.get(calculator_name.lower(), calculator_name.lower())
-
-
-def get_orb_calculator() -> "ORBCalculator":
-    """Initialize Orb calculator."""
-    from orb_models.forcefield import pretrained
-    from orb_models.forcefield.calculator import ORBCalculator
-
-    orbff = pretrained.orb_v2(device="cpu")
-    calculator = ORBCalculator(orbff, device="cpu")
-    return calculator
-
-
-def get_nequix_calculator(
-    model_name: str = NEQUIX_DEFAULT_MODEL,
-    backend: str = NEQUIX_DEFAULT_BACKEND,
-) -> "NequixCalculator":
-    """Initialize Nequix calculator on CPU."""
-    if backend == "jax":
-        _configure_jax_for_cpu()
-
-    from nequix.calculator import NequixCalculator
-
-    return NequixCalculator(
-        model_name,
-        backend=backend,
-    )
-
-
-def get_calculator(calculator_name: str) -> "ORBCalculator | NequixCalculator":
-    """Return an ASE calculator for the requested MLIP."""
-    calculator_key = _normalize_calculator_name(calculator_name)
-    if calculator_key == "orb":
-        return get_orb_calculator()
-    if calculator_key == "nequix":
-        return get_nequix_calculator()
-    raise ValueError(f"Unknown MLIP type: {calculator_name}")
+from mcp_atomictoolkit.calculators import DEFAULT_CALCULATOR_NAME, get_calculator
 
 
 def apply_constraints(atoms: Atoms, constraints: Optional[Dict[str, Any]]) -> None:
@@ -117,7 +51,7 @@ def apply_constraints(atoms: Atoms, constraints: Optional[Dict[str, Any]]) -> No
 
 def optimize_structure(
     structure: Atoms,
-    calculator_name: str = "nequix",
+    calculator_name: str = DEFAULT_CALCULATOR_NAME,
     max_steps: int = 50,
     fmax: float = 0.1,
     constraints: Optional[Dict[str, Any]] = None,
@@ -127,7 +61,7 @@ def optimize_structure(
 
     Args:
         structure: Input structure
-        calculator_name: Type of MLIP ('nequix' or 'orb')
+        calculator_name: Type of MLIP ('kim', 'nequix', or 'orb'). Defaults to KIM.
         max_steps: Maximum optimization steps
         fmax: Force convergence criterion
         constraints: Constraint settings (fixed atoms/cell/bonds)
@@ -141,7 +75,8 @@ def optimize_structure(
     apply_constraints(atoms, constraints)
 
     # Set up calculator
-    calculator = get_calculator(calculator_name)
+    species = sorted(set(atoms.get_chemical_symbols()))
+    calculator = get_calculator(calculator_name, species=species)
 
     atoms.calc = calculator
 
