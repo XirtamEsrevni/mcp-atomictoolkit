@@ -24,6 +24,9 @@ def _configure_jax_for_cpu() -> None:
     """Force JAX/Nequix execution on CPU-only runtimes."""
     # We intentionally overwrite these values to guarantee CPU execution even
     # when a hosting environment pre-sets GPU defaults.
+    os.environ["JAX_PLUGINS"] = ""
+    os.environ["JAX_SKIP_JAXLIB_PJRT_CUDA_PLUGIN"] = "1"
+    os.environ["JAX_SKIP_JAXLIB_PJRT_ROCM_PLUGIN"] = "1"
     os.environ["JAX_PLATFORMS"] = "cpu"
     os.environ["JAX_PLATFORM_NAME"] = "cpu"
     os.environ["CUDA_VISIBLE_DEVICES"] = ""
