@@ -88,3 +88,17 @@ def test_get_kim_calculator_import_error(monkeypatch):
     monkeypatch.setitem(sys.modules, "kim_query", None)
     with pytest.raises(RuntimeError, match="Failed to import ASE KIM calculator"):
         calculators.get_kim_calculator(species=["Al"])
+
+
+def test_resolve_calculator_falls_back_when_requested_fails(monkeypatch):
+    def fake_get_calculator_by_key(key, species):
+        if key == "kim":
+            raise RuntimeError("kim missing")
+        return {"name": key}
+
+    monkeypatch.setattr(calculators, "_get_calculator_by_key", fake_get_calculator_by_key)
+
+    calculator, used, errors = calculators.resolve_calculator("kim", species=["Al"])
+    assert calculator == {"name": "orb"}
+    assert used == "orb"
+    assert any(error.startswith("kim:") for error in errors)
