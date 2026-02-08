@@ -132,6 +132,9 @@ def test_handle_server_card_points_to_docs_and_static_lists(monkeypatch):
     assert payload["capabilities"]["tools"]["listChanged"] is False
     assert payload["capabilities"]["prompts"]["listChanged"] is False
     assert payload["capabilities"]["resources"]["listChanged"] is False
+    tool_names = [tool["name"] for tool in payload["tooling"]["tools"]]
+    assert "build_structure_workflow" in tool_names
+    assert "create_download_artifact" in tool_names
 
 
 def test_handle_docs_serves_readme(monkeypatch, tmp_path):

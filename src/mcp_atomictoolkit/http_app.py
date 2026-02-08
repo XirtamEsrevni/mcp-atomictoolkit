@@ -108,6 +108,21 @@ _mcp_root_app = _ArtifactBaseUrlContextApp(
 
 
 README_PATH = Path(__file__).resolve().parents[2] / "README.md"
+TOOL_NAMES = [
+    "build_structure_workflow",
+    "analyze_structure_workflow",
+    "write_structure_workflow",
+    "optimize_structure_workflow",
+    "single_point_workflow",
+    "run_md_workflow",
+    "analyze_trajectory_workflow",
+    "autocorrelation_workflow",
+    "build_structure",
+    "read_structure_file",
+    "write_structure_file",
+    "optimize_with_mlip",
+    "create_download_artifact",
+]
 
 
 def _public_base_url(request: Request) -> str:
@@ -142,6 +157,7 @@ async def handle_server_card(request: Request) -> JSONResponse:
             },
             "tooling": {
                 "domains": ["materials-science", "atomistic-simulation"],
+                "tools": [{"name": tool} for tool in TOOL_NAMES],
                 "artifactDownloadPath": f"{base_url}/artifacts/{{artifact_id}}/{{filename}}",
                 "artifactFormats": [
                     "xyz", "extxyz", "traj", "cif", "vasp", "poscar",
