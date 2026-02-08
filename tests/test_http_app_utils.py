@@ -40,6 +40,7 @@ def _load_http_app(monkeypatch):
     starlette_responses.FileResponse = FakeResponse
     starlette_responses.JSONResponse = FakeResponse
     starlette_responses.RedirectResponse = FakeResponse
+    starlette_responses.Response = FakeResponse
     starlette_routing.Route = FakeRoute
     starlette_routing.Mount = FakeMount
 
@@ -118,3 +119,30 @@ def test_public_base_url_falls_back_to_request_base(monkeypatch):
     http_app = _load_http_app(monkeypatch)
     request = http_app.Request({}, base_url="http://local.test/root/")
     assert http_app._public_base_url(request) == "http://local.test/root"
+
+
+def test_handle_server_card_points_to_docs_and_static_lists(monkeypatch):
+    http_app = _load_http_app(monkeypatch)
+    request = http_app.Request({"host": "local.test"}, base_url="http://local.test/")
+    import asyncio
+
+    response = asyncio.run(http_app.handle_server_card(request))
+    payload = response.args[0]
+    assert payload["documentationUrl"] == "http://local.test/docs"
+    assert payload["capabilities"]["tools"]["listChanged"] is False
+    assert payload["capabilities"]["prompts"]["listChanged"] is False
+    assert payload["capabilities"]["resources"]["listChanged"] is False
+    tool_names = [tool["name"] for tool in payload["tooling"]["tools"]]
+    assert "build_structure_workflow" in tool_names
+    assert "create_download_artifact" in tool_names
+
+
+def test_handle_docs_serves_readme(monkeypatch, tmp_path):
+    http_app = _load_http_app(monkeypatch)
+    readme = tmp_path / "README.md"
+    readme.write_text("hello", encoding="utf-8")
+    monkeypatch.setattr(http_app, "README_PATH", readme)
+    import asyncio
+
+    response = asyncio.run(http_app.handle_docs(http_app.Request({})))
+    assert response.args[0] == readme

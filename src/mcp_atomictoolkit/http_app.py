@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from starlette.applications import Starlette
 from starlette.requests import Request
-from starlette.responses import FileResponse, JSONResponse, RedirectResponse
+from starlette.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from starlette.routing import Mount, Route
 
 from mcp_atomictoolkit.artifact_store import artifact_store, reset_request_base_url, set_request_base_url
@@ -105,6 +107,24 @@ _mcp_root_app = _ArtifactBaseUrlContextApp(
 )
 
 
+README_PATH = Path(__file__).resolve().parents[2] / "README.md"
+TOOL_NAMES = [
+    "build_structure_workflow",
+    "analyze_structure_workflow",
+    "write_structure_workflow",
+    "optimize_structure_workflow",
+    "single_point_workflow",
+    "run_md_workflow",
+    "analyze_trajectory_workflow",
+    "autocorrelation_workflow",
+    "build_structure",
+    "read_structure_file",
+    "write_structure_file",
+    "optimize_with_mlip",
+    "create_download_artifact",
+]
+
+
 def _public_base_url(request: Request) -> str:
     """Compute public base URL, honoring reverse-proxy headers."""
     forwarded_proto = request.headers.get("x-forwarded-proto")
@@ -128,15 +148,16 @@ async def handle_server_card(request: Request) -> JSONResponse:
             "description": "MCP server for atomistic structure generation, analysis, optimization, and molecular dynamics using ASE, pymatgen, Nequix, and Orb.",
             "version": "0.1.0",
             "homepage": base_url,
-            "documentationUrl": f"{base_url}/.well-known/mcp/server-card.json",
+            "documentationUrl": f"{base_url}/docs",
             "defaultTransport": {"type": "streamable-http", "url": f"{base_url}/"},
             "capabilities": {
-                "tools": {"listChanged": True},
-                "prompts": {"listChanged": True},
-                "resources": {"listChanged": True, "subscribe": False},
+                "tools": {"listChanged": False},
+                "prompts": {"listChanged": False},
+                "resources": {"listChanged": False, "subscribe": False},
             },
             "tooling": {
                 "domains": ["materials-science", "atomistic-simulation"],
+                "tools": [{"name": tool} for tool in TOOL_NAMES],
                 "artifactDownloadPath": f"{base_url}/artifacts/{{artifact_id}}/{{filename}}",
                 "artifactFormats": [
                     "xyz", "extxyz", "traj", "cif", "vasp", "poscar",
@@ -172,6 +193,18 @@ async def handle_artifact_download(request: Request):
         media_type="text/html; charset=utf-8" if is_html_preview else None,
     )
 
+
+async def handle_docs(request: Request) -> Response:
+    """Serve a lightweight documentation page for the server card link."""
+    if not README_PATH.exists():
+        return JSONResponse({"error": "documentation_not_found"}, status_code=404)
+    return FileResponse(
+        README_PATH,
+        media_type="text/markdown; charset=utf-8",
+        filename="README.md",
+    )
+
+
 async def handle_sse_no_slash(request: Request):
     """Normalize /sse -> /sse/ so the mounted compatibility app handles it."""
     return RedirectResponse(url="/sse/", status_code=307)
@@ -179,6 +212,7 @@ async def handle_sse_no_slash(request: Request):
 
 app = Starlette(
     routes=[
+        Route("/docs", handle_docs),
         Route("/healthz", handle_healthz),
         Route("/.well-known/mcp/server-card.json", handle_server_card),
         Route("/artifacts/{artifact_id:str}/{filename:str}", handle_artifact_download),

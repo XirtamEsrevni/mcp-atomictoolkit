@@ -68,6 +68,16 @@ Alternative:
 python main.py
 ```
 
+STDIO mode (for desktop MCP clients):
+
+```bash
+python -m mcp_atomictoolkit.mcp_server
+```
+
+> [!IMPORTANT]
+> STDIO transports must keep stdout clean for JSON-RPC. Avoid `print()` or logging to stdout
+> when running the server in STDIO mode.
+
 ### 4) Smoke check
 
 ```bash
@@ -103,6 +113,7 @@ Legacy aliases are also included for backward compatibility.
 
 - `POST /` — primary MCP Streamable HTTP endpoint
 - `GET /healthz` — health check
+- `GET /docs` — lightweight documentation (README)
 - `GET /.well-known/mcp/server-card.json` — MCP server card metadata
 - `GET /artifacts/{artifact_id}/{filename}` — artifact download route
 - `/sse/` — compatibility alias path mounted to the MCP app
