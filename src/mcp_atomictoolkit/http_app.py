@@ -1,5 +1,15 @@
 from __future__ import annotations
 
+import os
+
+os.environ.setdefault("JAX_PLUGINS", "")
+os.environ.setdefault("JAX_SKIP_JAXLIB_PJRT_CUDA_PLUGIN", "1")
+os.environ.setdefault("JAX_SKIP_JAXLIB_PJRT_ROCM_PLUGIN", "1")
+os.environ.setdefault("JAX_PLATFORMS", "cpu")
+os.environ.setdefault("JAX_PLATFORM_NAME", "cpu")
+os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")
+os.environ.setdefault("JAX_CUDA_VISIBLE_DEVICES", "")
+
 from pathlib import Path
 
 from starlette.applications import Starlette
@@ -94,14 +104,39 @@ class _AcceptHeaderCompatApp:
         await self.app(scope, receive, send)
 
 
+class _RootInfoApp:
+    """ASGI adapter that serves a fast GET/HEAD response on the MCP root."""
+
+    def __init__(self, app) -> None:
+        self.app = app
+        self.lifespan = getattr(app, "lifespan", None)
+
+    async def __call__(self, scope, receive, send) -> None:
+        if scope.get("type") == "http" and scope.get("path") == "/":
+            method = scope.get("method", "GET").upper()
+            if method in {"GET", "HEAD"}:
+                response = JSONResponse(
+                    {
+                        "status": "ok",
+                        "service": "atomictoolkit",
+                        "mcp": "streamable-http",
+                    }
+                )
+                await response(scope, receive, send)
+                return
+        await self.app(scope, receive, send)
+
+
 # Primary MCP endpoint expected by Smithery and most registries.
 _mcp_root_app = _ArtifactBaseUrlContextApp(
     _AcceptHeaderCompatApp(
-        mcp.http_app(
-            path="/",
-            transport="streamable-http",
-            json_response=True,
-            stateless_http=True,
+        _RootInfoApp(
+            mcp.http_app(
+                path="/",
+                transport="streamable-http",
+                json_response=True,
+                stateless_http=True,
+            )
         )
     )
 )

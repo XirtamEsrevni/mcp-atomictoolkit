@@ -9,3 +9,17 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: "3.11"
+      - key: JAX_PLUGINS
+        value: ""
+      - key: JAX_SKIP_JAXLIB_PJRT_CUDA_PLUGIN
+        value: "1"
+      - key: JAX_SKIP_JAXLIB_PJRT_ROCM_PLUGIN
+        value: "1"
+      - key: JAX_PLATFORMS
+        value: "cpu"
+      - key: JAX_PLATFORM_NAME
+        value: "cpu"
+      - key: CUDA_VISIBLE_DEVICES
+        value: ""
+      - key: JAX_CUDA_VISIBLE_DEVICES
+        value: ""
