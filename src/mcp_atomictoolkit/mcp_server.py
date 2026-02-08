@@ -1,5 +1,10 @@
 import logging
+import os
+import platform
+import resource
 import traceback
+from datetime import datetime, timezone
+from pathlib import Path
 from time import perf_counter
 from typing import Any, Callable, Dict, List, Optional
 from fastmcp import FastMCP
@@ -43,6 +48,7 @@ def _error_hints(tool_name: str, kwargs: Dict[str, Any], exc: Exception) -> List
     hints: List[str] = []
     msg = str(exc).lower()
     crystal_system = str(kwargs.get("crystal_system", "")).lower()
+    oom_signals = ("out of memory", "oom", "killed process", "cuda out of memory")
 
     if tool_name == "build_structure_workflow" and crystal_system == "hcp":
         if "cubic" in msg or kwargs.get("builder_kwargs", {}).get("cubic", None) is not False:
@@ -57,12 +63,21 @@ def _error_hints(tool_name: str, kwargs: Dict[str, Any], exc: Exception) -> List
         hints.append(
             "KIM dependencies are missing. Either install kimpy/KIM API on the server or set calculator_name to 'auto', 'orb', or 'nequix' to use an available backend."
         )
+    if isinstance(exc, MemoryError) or any(signal in msg for signal in oom_signals):
+        hints.append(
+            "The workflow likely exhausted available memory. On Render, verify the instance size or reduce system size/steps."
+        )
+    if "timeout" in msg or "timed out" in msg:
+        hints.append(
+            "The workflow timed out. Try reducing steps, using a lighter calculator, or increasing the service timeout."
+        )
 
     return hints
 
 
 def _tool_error_response(tool_name: str, exc: Exception, elapsed_ms: float, kwargs: Dict[str, Any]) -> Dict[str, Any]:
     compact_args = _compact_kwargs(kwargs)
+    error_report_filepath = _write_error_report(tool_name, exc, elapsed_ms, compact_args)
     response: Dict[str, Any] = {
         "status": "error",
         "tool_name": tool_name,
@@ -73,10 +88,74 @@ def _tool_error_response(tool_name: str, exc: Exception, elapsed_ms: float, kwar
             "traceback": traceback.format_exc(),
         },
         "inputs": compact_args,
+        "error_report_filepath": error_report_filepath,
         "hints": _error_hints(tool_name, kwargs, exc),
         "next_action": "Adjust tool arguments and retry this MCP tool call. Do not replace the workflow with ad-hoc code.",
     }
     return response
+
+
+def _write_error_report(
+    tool_name: str,
+    exc: Exception,
+    elapsed_ms: float,
+    compact_args: Dict[str, Any],
+) -> str:
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    report_dir = Path("tool_errors")
+    report_dir.mkdir(parents=True, exist_ok=True)
+    report_path = report_dir / f"{tool_name}_{timestamp}.log"
+    resource_snapshot = _collect_resource_snapshot()
+    report_text = "\n".join(
+        [
+            f"tool_name: {tool_name}",
+            f"timestamp_utc: {timestamp}",
+            f"elapsed_ms: {elapsed_ms:.3f}",
+            f"exception_type: {exc.__class__.__name__}",
+            f"exception_message: {exc}",
+            "resource_snapshot:",
+            str(resource_snapshot),
+            "inputs:",
+            str(compact_args),
+            "",
+            "traceback:",
+            traceback.format_exc(),
+        ]
+    )
+    report_path.write_text(report_text, encoding="utf-8")
+    return str(report_path.absolute())
+
+
+def _collect_resource_snapshot() -> Dict[str, Any]:
+    snapshot: Dict[str, Any] = {
+        "pid": os.getpid(),
+        "cwd": os.getcwd(),
+        "python_version": platform.python_version(),
+        "platform": platform.platform(),
+    }
+    try:
+        usage = resource.getrusage(resource.RUSAGE_SELF)
+        snapshot["max_rss_kb"] = usage.ru_maxrss
+        snapshot["user_time_s"] = usage.ru_utime
+        snapshot["system_time_s"] = usage.ru_stime
+    except Exception as exc:
+        snapshot["resource_error"] = str(exc)
+
+    meminfo_path = Path("/proc/meminfo")
+    if meminfo_path.exists():
+        try:
+            meminfo = meminfo_path.read_text(encoding="utf-8").splitlines()
+            parsed = {}
+            for line in meminfo:
+                if ":" not in line:
+                    continue
+                key, value = line.split(":", 1)
+                parsed[key.strip()] = value.strip()
+            snapshot["meminfo"] = parsed
+        except Exception as exc:
+            snapshot["meminfo_error"] = str(exc)
+
+    return snapshot
 
 
 def _run_tool(tool_name: str, impl: Callable[..., Dict], **kwargs: Any) -> Dict:

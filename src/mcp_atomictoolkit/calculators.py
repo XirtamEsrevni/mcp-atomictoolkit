@@ -1,5 +1,6 @@
 """Calculator configuration helpers for MLIP backends."""
 
+import logging
 import os
 import warnings
 from typing import TYPE_CHECKING, Sequence
@@ -15,6 +16,8 @@ KIM_DEFAULT_MODEL = "LJ_ElliottAkerson_2015_Universal__MO_959249795837_003"
 # Default to auto-selection so low-resource environments can fall back when
 # heavyweight dependencies (e.g., KIM API) are unavailable.
 DEFAULT_CALCULATOR_NAME = "auto"
+
+logger = logging.getLogger("mcp_atomictoolkit.calculators")
 
 
 def _configure_jax_for_cpu() -> None:
@@ -185,6 +188,12 @@ def resolve_calculator(
             calculator = _get_calculator_by_key(candidate, species)
         except Exception as exc:
             errors.append(f"{candidate}: {exc}")
+            logger.warning(
+                "Calculator '%s' unavailable: %s",
+                candidate,
+                exc,
+                exc_info=True,
+            )
             continue
         return calculator, candidate, errors
 
