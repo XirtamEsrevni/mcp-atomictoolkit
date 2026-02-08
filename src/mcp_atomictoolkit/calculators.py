@@ -177,13 +177,16 @@ def resolve_calculator(
 ) -> tuple["ORBCalculator | NequixCalculator | KIMCalculator", str, list[str]]:
     """Resolve a calculator, optionally falling back when auto-selection is used."""
     calculator_key = _normalize_calculator_name(calculator_name)
+    available_candidates = ("kim", "orb", "nequix")
     if calculator_key == "auto":
-        candidates = ("kim", "orb", "nequix")
+        candidates = available_candidates
     else:
         candidates = (calculator_key,)
 
     errors: list[str] = []
+    attempted: list[str] = []
     for candidate in candidates:
+        attempted.append(candidate)
         try:
             calculator = _get_calculator_by_key(candidate, species)
         except Exception as exc:
@@ -197,10 +200,27 @@ def resolve_calculator(
             continue
         return calculator, candidate, errors
 
-    attempted = ", ".join(candidates)
+    if calculator_key != "auto":
+        fallback_candidates = [c for c in available_candidates if c != calculator_key]
+        for candidate in fallback_candidates:
+            attempted.append(candidate)
+            try:
+                calculator = _get_calculator_by_key(candidate, species)
+            except Exception as exc:
+                errors.append(f"{candidate}: {exc}")
+                logger.warning(
+                    "Calculator '%s' unavailable: %s",
+                    candidate,
+                    exc,
+                    exc_info=True,
+                )
+                continue
+            return calculator, candidate, errors
+
+    attempted_summary = ", ".join(attempted)
     detail = "; ".join(errors) or "no additional error details"
     raise RuntimeError(
-        f"Failed to initialize any MLIP calculator (attempted: {attempted}). Details: {detail}"
+        f"Failed to initialize any MLIP calculator (attempted: {attempted_summary}). Details: {detail}"
     )
 
 
