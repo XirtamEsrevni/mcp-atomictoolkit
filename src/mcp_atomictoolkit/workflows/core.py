@@ -30,6 +30,18 @@ def build_structure_workflow(
     builder_kwargs: Optional[Dict] = None,
 ) -> Dict:
     """Build an atomic structure, write to disk, and return metadata."""
+    builder_overrides = dict(builder_kwargs or {})
+    if "crystal_system" in builder_overrides:
+        crystal_system = builder_overrides.pop("crystal_system")
+    if "lattice_constant" in builder_overrides:
+        lattice_constant = builder_overrides.pop("lattice_constant")
+    if "pbc" in builder_overrides:
+        pbc = builder_overrides.pop("pbc")
+    if "cell" in builder_overrides:
+        cell = builder_overrides.pop("cell")
+    if "cell_size" in builder_overrides:
+        cell_size = builder_overrides.pop("cell_size")
+
     structure = create_structure(
         formula,
         structure_type,
@@ -38,7 +50,7 @@ def build_structure_workflow(
         pbc=pbc,
         cell=cell,
         cell_size=cell_size,
-        **(builder_kwargs or {}),
+        **builder_overrides,
     )
     write_structure(structure, output_filepath, output_format)
     info = get_structure_info(structure)
