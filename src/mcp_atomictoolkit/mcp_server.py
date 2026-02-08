@@ -13,6 +13,7 @@ from mcp_atomictoolkit.workflows.core import (
     build_structure_workflow as build_structure_workflow_impl,
     optimize_structure_workflow as optimize_structure_workflow_impl,
     run_md_workflow as run_md_workflow_impl,
+    single_point_workflow as single_point_workflow_impl,
     write_structure_workflow as write_structure_workflow_impl,
 )
 
@@ -224,6 +225,8 @@ async def optimize_structure_workflow(
     max_steps: int = 50,
     fmax: float = 0.1,
     constraints: Optional[Dict] = None,
+    maxstep: float = 0.04,
+    alpha: float = 70.0,
 ) -> Dict:
     """Optimize structure using MLIP and return metadata.
 
@@ -236,6 +239,8 @@ async def optimize_structure_workflow(
         max_steps: Maximum optimization steps
         fmax: Force convergence criterion
         constraints: Constraint settings (fixed atoms/cell/bonds)
+        maxstep: Maximum step size for the optimizer (Angstrom)
+        alpha: BFGS damping parameter
 
     Returns:
         Dict containing optimized structure metadata
@@ -251,6 +256,24 @@ async def optimize_structure_workflow(
         max_steps=max_steps,
         fmax=fmax,
         constraints=constraints,
+        maxstep=maxstep,
+        alpha=alpha,
+    )
+
+
+@mcp.tool()
+async def single_point_workflow(
+    input_filepath: str,
+    input_format: Optional[str] = None,
+    calculator_name: str = DEFAULT_CALCULATOR_NAME,
+) -> Dict:
+    """Compute single-point energy, forces, and stress (if periodic)."""
+    return _run_tool(
+        "single_point_workflow",
+        single_point_workflow_impl,
+        input_filepath=input_filepath,
+        input_format=input_format,
+        calculator_name=calculator_name,
     )
 
 
@@ -271,7 +294,13 @@ async def run_md_workflow(
     taut: float = 100.0,
     trajectory_interval: int = 1,
 ) -> Dict:
-    """Run molecular dynamics workflow and return outputs."""
+    """Run molecular dynamics workflow and return outputs.
+
+    Integrator options:
+        - velocityverlet / nve
+        - langevin / nvt-langevin
+        - nvt / nvt-berendsen
+    """
     return _run_tool(
         "run_md_workflow",
         run_md_workflow_impl,

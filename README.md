@@ -90,6 +90,7 @@ Main MCP tools exposed by the server:
 - `analyze_structure_workflow`
 - `write_structure_workflow`
 - `optimize_structure_workflow`
+- `single_point_workflow`
 - `run_md_workflow`
 - `analyze_trajectory_workflow`
 - `autocorrelation_workflow`
@@ -142,6 +143,62 @@ src/mcp_atomictoolkit/
   md_runner.py
   artifact_store.py      # Download artifact registration + URLs
 ```
+
+---
+
+## 🧪 Workflow Notes (for MCP clients)
+
+### Structure building coverage
+
+`build_structure_workflow` supports:
+
+- **bulk** (ASE `bulk`)
+- **surface** (ASE `surface`)
+- **molecule** (ASE `molecule`)
+- **supercell** (multiplication of a base structure)
+- **amorphous/liquid** (random packed structures)
+- **bicrystal** and **polycrystal** (grain stacking/rotation)
+
+For **interfaces, doped structures, adsorbates, or custom slabs**, prefer:
+
+1. Generate the structure with ASE/pymatgen (or an external builder), then
+2. Use `write_structure_workflow` to persist the final geometry for downstream steps.
+
+This ensures MCP callers can still handle advanced structures even when a specialized
+builder is required.
+
+### Builder kwargs cheat sheet
+
+Common `builder_kwargs` for `build_structure_workflow`:
+
+- **surface**: `indices`, `layers`, `vacuum`
+- **supercell**: `size`, `base_structure_type`, `base_crystal_system`, `base_lattice_constant`, `base_kwargs`
+- **amorphous/liquid**: `num_atoms`, `box_length`, `relax`, `relax_steps`, `relax_fmax`
+- **bicrystal**: `grain_size`, `interface_axis`, `rotation_angle`, `rotation_axis`, `interface_gap`
+- **polycrystal**: `num_grains`, `grain_size`, `rotation_angle`
+
+### Optimization options
+
+`optimize_structure_workflow` exposes:
+
+- `max_steps`, `fmax` (convergence)
+- `maxstep`, `alpha` (BFGS step/damping controls)
+- `constraints` (`fixed_atoms`, `fixed_bonds`, `fixed_cell`)
+
+### Single-point calculations
+
+`single_point_workflow` computes **energy**, **forces**, and **stress** (if periodic)
+without modifying the structure, making it suitable for quick evaluations.
+
+### MD integrators / ensembles
+
+`run_md_workflow` supports:
+
+- `velocityverlet` / `nve` (NVE)
+- `langevin` / `nvt-langevin` (NVT)
+- `nvt` / `nvt-berendsen` (NVT)
+
+Tune `temperature_K`, `friction`, and `taut` to control thermostat behavior.
 
 ---
 

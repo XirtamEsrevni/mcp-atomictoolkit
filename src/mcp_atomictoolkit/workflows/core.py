@@ -10,7 +10,7 @@ from ase import Atoms
 from mcp_atomictoolkit.analysis.autocorrelation import analyze_vacf
 from mcp_atomictoolkit.analysis.structure import analyze_structure
 from mcp_atomictoolkit.analysis.trajectory import analyze_trajectory
-from mcp_atomictoolkit.calculators import DEFAULT_CALCULATOR_NAME
+from mcp_atomictoolkit.calculators import DEFAULT_CALCULATOR_NAME, resolve_calculator
 from mcp_atomictoolkit.io_handlers import read_structure, write_structure
 from mcp_atomictoolkit.md_runner import run_md
 from mcp_atomictoolkit.optimizers import optimize_structure
@@ -114,6 +114,8 @@ def optimize_structure_workflow(
     max_steps: int = 50,
     fmax: float = 0.1,
     constraints: Optional[Dict] = None,
+    maxstep: float = 0.04,
+    alpha: float = 70.0,
 ) -> Dict:
     """Optimize a structure read from disk, write results, and return metadata."""
     structure = read_structure(input_filepath, input_format)
@@ -123,6 +125,8 @@ def optimize_structure_workflow(
         max_steps=max_steps,
         fmax=fmax,
         constraints=constraints,
+        maxstep=maxstep,
+        alpha=alpha,
     )
 
     write_structure(optimized, output_filepath, output_format)
@@ -136,6 +140,37 @@ def optimize_structure_workflow(
         "calculator_requested": optimized.info.get("calculator_requested", calculator_name),
         "calculator_used": optimized.info.get("calculator_used", calculator_name),
         "calculator_fallbacks": optimized.info.get("calculator_fallbacks", []),
+    }
+
+
+def single_point_workflow(
+    input_filepath: str,
+    input_format: Optional[str] = None,
+    calculator_name: str = DEFAULT_CALCULATOR_NAME,
+) -> Dict:
+    """Compute single-point energy/forces without relaxation or MD."""
+    structure = read_structure(input_filepath, input_format)
+    species = sorted(set(structure.get_chemical_symbols()))
+    calculator, calculator_used, calculator_errors = resolve_calculator(
+        calculator_name,
+        species=species,
+    )
+    structure.calc = calculator
+
+    energy = structure.get_potential_energy()
+    forces = structure.get_forces()
+    stress = None
+    if all(structure.pbc):
+        stress = structure.get_stress().tolist()
+
+    return {
+        "input_filepath": str(Path(input_filepath).absolute()),
+        "energy": energy,
+        "forces": forces.tolist(),
+        "stress": stress,
+        "calculator_requested": calculator_name,
+        "calculator_used": calculator_used,
+        "calculator_fallbacks": calculator_errors,
     }
 
 
