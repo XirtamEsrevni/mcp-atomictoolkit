@@ -1,5 +1,15 @@
 from __future__ import annotations
 
+import os
+
+os.environ.setdefault("JAX_PLUGINS", "")
+os.environ.setdefault("JAX_SKIP_JAXLIB_PJRT_CUDA_PLUGIN", "1")
+os.environ.setdefault("JAX_SKIP_JAXLIB_PJRT_ROCM_PLUGIN", "1")
+os.environ.setdefault("JAX_PLATFORMS", "cpu")
+os.environ.setdefault("JAX_PLATFORM_NAME", "cpu")
+os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")
+os.environ.setdefault("JAX_CUDA_VISIBLE_DEVICES", "")
+
 from pathlib import Path
 
 from starlette.applications import Starlette
