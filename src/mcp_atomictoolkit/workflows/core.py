@@ -133,6 +133,9 @@ def optimize_structure_workflow(
         "converged": optimized.info.get("optimization_converged", False),
         "steps": optimized.info.get("optimization_steps", 0),
         "final_fmax": optimized.info.get("optimization_fmax", None),
+        "calculator_requested": optimized.info.get("calculator_requested", calculator_name),
+        "calculator_used": optimized.info.get("calculator_used", calculator_name),
+        "calculator_fallbacks": optimized.info.get("calculator_fallbacks", []),
     }
 
 

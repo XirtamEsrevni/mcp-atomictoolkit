@@ -19,7 +19,7 @@ from ase.md.verlet import VelocityVerlet
 from ase.md.logger import MDLogger
 
 from mcp_atomictoolkit.io_handlers import read_structure
-from mcp_atomictoolkit.calculators import DEFAULT_CALCULATOR_NAME, get_calculator
+from mcp_atomictoolkit.calculators import DEFAULT_CALCULATOR_NAME, resolve_calculator
 
 
 @dataclass
@@ -134,7 +134,7 @@ def run_md(
         output_format: Trajectory format (optional, inferred from path).
         log_filepath: Path to log file for MD energies/temperature.
         summary_filepath: Path to summary file for MD statistics.
-        calculator_name: Type of MLIP ('kim', 'nequix', or 'orb'). Defaults to KIM.
+        calculator_name: Type of MLIP ('auto', 'kim', 'nequix', or 'orb'). Defaults to auto.
         integrator: Integrator ('velocityverlet', 'langevin', 'nvt').
         timestep_fs: MD timestep in femtoseconds.
         temperature_K: Target temperature in Kelvin.
@@ -148,7 +148,11 @@ def run_md(
     """
     atoms = read_structure(input_filepath, input_format)
     species = sorted(set(atoms.get_chemical_symbols()))
-    atoms.calc = get_calculator(calculator_name, species=species)
+    calculator, calculator_used, calculator_errors = resolve_calculator(
+        calculator_name,
+        species=species,
+    )
+    atoms.calc = calculator
 
     _initialize_velocities(atoms, temperature_K)
 
@@ -232,4 +236,7 @@ def run_md(
         "log_filepath": str(log_path.absolute()),
         "summary_filepath": str(summary_path.absolute()),
         "summary": summary.as_dict(),
+        "calculator_requested": calculator_name,
+        "calculator_used": calculator_used,
+        "calculator_fallbacks": calculator_errors,
     }
