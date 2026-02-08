@@ -35,6 +35,7 @@ def _load_mcp_server(monkeypatch):
         "build_structure_workflow",
         "optimize_structure_workflow",
         "run_md_workflow",
+        "single_point_workflow",
         "write_structure_workflow",
     ):
         setattr(
