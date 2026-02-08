@@ -52,6 +52,10 @@ def _error_hints(tool_name: str, kwargs: Dict[str, Any], exc: Exception) -> List
         hints.append("Verify file paths are correct and that prior workflow steps completed successfully.")
     if tool_name in {"optimize_structure_workflow", "run_md_workflow", "analyze_trajectory_workflow"}:
         hints.append("Use returned artifact download_url links for trajectory/log/analysis files instead of regenerating files manually.")
+    if "kimpy" in msg or "kim api" in msg or "openkim" in msg:
+        hints.append(
+            "KIM dependencies are missing. Either install kimpy/KIM API on the server or set calculator_name to 'auto', 'orb', or 'nequix' to use an available backend."
+        )
 
     return hints
 
@@ -228,7 +232,7 @@ async def optimize_structure_workflow(
         input_format: File format (optional)
         output_filepath: Output file path
         output_format: Output file format (optional)
-        calculator_name: Type of MLIP ('kim', 'nequix', or 'orb'). Defaults to KIM.
+        calculator_name: Type of MLIP ('auto', 'kim', 'nequix', or 'orb'). Defaults to auto.
         max_steps: Maximum optimization steps
         fmax: Force convergence criterion
         constraints: Constraint settings (fixed atoms/cell/bonds)

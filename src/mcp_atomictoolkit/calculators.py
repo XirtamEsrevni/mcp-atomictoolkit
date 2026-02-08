@@ -12,9 +12,9 @@ if TYPE_CHECKING:
 NEQUIX_DEFAULT_MODEL = "nequix-mp-1"
 NEQUIX_DEFAULT_BACKEND = "jax"
 KIM_DEFAULT_MODEL = "LJ_ElliottAkerson_2015_Universal__MO_959249795837_003"
-# Default to the KIM pathway unless callers explicitly request a specific MLIP
-# (including the "orb of nequix" alias used when Orb is deemed superior).
-DEFAULT_CALCULATOR_NAME = "kim"
+# Default to auto-selection so low-resource environments can fall back when
+# heavyweight dependencies (e.g., KIM API) are unavailable.
+DEFAULT_CALCULATOR_NAME = "auto"
 
 
 def _configure_jax_for_cpu() -> None:
@@ -36,6 +36,8 @@ def _normalize_calculator_name(calculator_name: str) -> str:
     """Return canonical calculator key, accepting common aliases/typos."""
     normalized = calculator_name.strip().lower()
     aliases = {
+        "auto-select": "auto",
+        "auto_select": "auto",
         "neqix": "nequix",
         "orb of nequix": "orb",
         "orb-of-nequix": "orb",
@@ -153,16 +155,53 @@ def get_kim_calculator(
         raise RuntimeError(message) from exc
 
 
-def get_calculator(
-    calculator_name: str,
-    species: Sequence[str] | None = None,
+def _get_calculator_by_key(
+    calculator_key: str,
+    species: Sequence[str] | None,
 ) -> "ORBCalculator | NequixCalculator | KIMCalculator":
-    """Return an ASE calculator for the requested MLIP."""
-    calculator_key = _normalize_calculator_name(calculator_name)
     if calculator_key == "orb":
         return get_orb_calculator()
     if calculator_key == "nequix":
         return get_nequix_calculator()
     if calculator_key == "kim":
         return get_kim_calculator(species=species)
-    raise ValueError(f"Unknown MLIP type: {calculator_name}")
+    raise ValueError(f"Unknown MLIP type: {calculator_key}")
+
+
+def resolve_calculator(
+    calculator_name: str,
+    species: Sequence[str] | None = None,
+) -> tuple["ORBCalculator | NequixCalculator | KIMCalculator", str, list[str]]:
+    """Resolve a calculator, optionally falling back when auto-selection is used."""
+    calculator_key = _normalize_calculator_name(calculator_name)
+    if calculator_key == "auto":
+        candidates = ("kim", "orb", "nequix")
+    else:
+        candidates = (calculator_key,)
+
+    errors: list[str] = []
+    for candidate in candidates:
+        try:
+            calculator = _get_calculator_by_key(candidate, species)
+        except Exception as exc:
+            errors.append(f"{candidate}: {exc}")
+            continue
+        return calculator, candidate, errors
+
+    attempted = ", ".join(candidates)
+    detail = "; ".join(errors) or "no additional error details"
+    raise RuntimeError(
+        f"Failed to initialize any MLIP calculator (attempted: {attempted}). Details: {detail}"
+    )
+
+
+def get_calculator(
+    calculator_name: str,
+    species: Sequence[str] | None = None,
+) -> "ORBCalculator | NequixCalculator | KIMCalculator":
+    """Return an ASE calculator for the requested MLIP."""
+    calculator, _used, _errors = resolve_calculator(
+        calculator_name,
+        species=species,
+    )
+    return calculator

@@ -7,7 +7,7 @@ from ase import Atoms
 from ase.constraints import FixAtoms, FixBondLength, FixBondLengths
 from ase.optimize import BFGS
 
-from mcp_atomictoolkit.calculators import DEFAULT_CALCULATOR_NAME, get_calculator
+from mcp_atomictoolkit.calculators import DEFAULT_CALCULATOR_NAME, resolve_calculator
 
 
 def apply_constraints(atoms: Atoms, constraints: Optional[Dict[str, Any]]) -> None:
@@ -61,7 +61,7 @@ def optimize_structure(
 
     Args:
         structure: Input structure
-        calculator_name: Type of MLIP ('kim', 'nequix', or 'orb'). Defaults to KIM.
+        calculator_name: Type of MLIP ('auto', 'kim', 'nequix', or 'orb'). Defaults to auto.
         max_steps: Maximum optimization steps
         fmax: Force convergence criterion
         constraints: Constraint settings (fixed atoms/cell/bonds)
@@ -76,9 +76,15 @@ def optimize_structure(
 
     # Set up calculator
     species = sorted(set(atoms.get_chemical_symbols()))
-    calculator = get_calculator(calculator_name, species=species)
-
+    calculator, calculator_used, calculator_errors = resolve_calculator(
+        calculator_name,
+        species=species,
+    )
     atoms.calc = calculator
+    atoms.info["calculator_requested"] = calculator_name
+    atoms.info["calculator_used"] = calculator_used
+    if calculator_errors:
+        atoms.info["calculator_fallbacks"] = calculator_errors
 
     optimizer = BFGS(
         atoms, maxstep=kwargs.get("maxstep", 0.04), alpha=kwargs.get("alpha", 70.0)
