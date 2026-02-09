@@ -90,6 +90,27 @@ def test_get_kim_calculator_import_error(monkeypatch):
         calculators.get_kim_calculator(species=["Al"])
 
 
+def test_get_kim_calculator_falls_back_to_default_model(monkeypatch):
+    kim_module = types.ModuleType("ase.calculators.kim.kim")
+
+    class KIM:
+        def __init__(self, model_id):
+            if model_id != calculators.KIM_DEFAULT_MODEL:
+                raise RuntimeError("model missing")
+            self.model_id = model_id
+
+    kim_module.KIM = KIM
+    monkeypatch.setitem(sys.modules, "ase.calculators.kim.kim", kim_module)
+    kim_query = types.ModuleType("kim_query")
+    kim_query.get_available_models = lambda species, potential_type: ["TEST_MODEL"]
+    monkeypatch.setitem(sys.modules, "kim_query", kim_query)
+
+    with pytest.warns(RuntimeWarning, match="falling back to default model"):
+        calculator = calculators.get_kim_calculator(species=["Al"])
+
+    assert calculator.model_id == calculators.KIM_DEFAULT_MODEL
+
+
 def test_resolve_calculator_falls_back_when_requested_fails(monkeypatch):
     def fake_get_calculator_by_key(key, species):
         if key == "kim":

@@ -154,6 +154,23 @@ def get_kim_calculator(
     try:
         return KIM(model_id)
     except Exception as exc:
+        if model_id != KIM_DEFAULT_MODEL:
+            warnings.warn(
+                (
+                    f"KIM model '{model_id}' is unavailable; falling back to "
+                    f"default model '{KIM_DEFAULT_MODEL}'. Original error: {exc}"
+                ),
+                RuntimeWarning,
+            )
+            try:
+                return KIM(KIM_DEFAULT_MODEL)
+            except Exception as fallback_exc:
+                message = (
+                    f"Failed to initialize KIM model '{model_id}' and fallback model "
+                    f"'{KIM_DEFAULT_MODEL}'. Ensure the KIM API and kimpy are installed "
+                    "and that the models are available locally."
+                )
+                raise RuntimeError(message) from fallback_exc
         message = (
             f"Failed to initialize KIM model '{model_id}'. Ensure the KIM API and kimpy "
             "are installed and that the model is available locally."
