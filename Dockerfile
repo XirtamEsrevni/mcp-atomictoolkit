@@ -11,10 +11,12 @@ RUN apt-get update \
         build-essential \
         pkg-config \
         git \
+    && add-apt-repository ppa:deadsnakes/ppa \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
         python3.12 \
         python3.12-dev \
         python3.12-venv \
-        python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
 RUN add-apt-repository ppa:openkim/latest \
@@ -22,10 +24,11 @@ RUN add-apt-repository ppa:openkim/latest \
     && apt-get install -y --no-install-recommends libkim-api-dev \
     && rm -rf /var/lib/apt/lists/*
 
-ENV LD_LIBRARY_PATH="/usr/lib:/usr/local/lib:${LD_LIBRARY_PATH:-}"
-ENV PKG_CONFIG_PATH="/usr/lib/pkgconfig:/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+ENV LD_LIBRARY_PATH="/usr/lib:/usr/local/lib"
+ENV PKG_CONFIG_PATH="/usr/lib/pkgconfig:/usr/local/lib/pkgconfig"
 
-RUN python3.12 -m pip install --no-cache-dir --upgrade pip \
+RUN python3.12 -m ensurepip --upgrade \
+    && python3.12 -m pip install --no-cache-dir --upgrade pip \
     && python3.12 -m pip install --no-cache-dir -r requirements.txt
 
 EXPOSE 7860
