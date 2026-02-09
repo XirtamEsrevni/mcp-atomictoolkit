@@ -1,10 +1,9 @@
 services:
   - type: web
     name: mcp-atomictoolkit
-    env: python
+    env: docker
     plan: free
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn mcp_atomictoolkit.http_app:app --host 0.0.0.0 --port $PORT
+    dockerfilePath: ./Dockerfile
     healthCheckPath: /healthz
     envVars:
       - key: PYTHON_VERSION

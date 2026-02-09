@@ -152,10 +152,7 @@ TOOL_NAMES = [
     "run_md_workflow",
     "analyze_trajectory_workflow",
     "autocorrelation_workflow",
-    "build_structure",
     "read_structure_file",
-    "write_structure_file",
-    "optimize_with_mlip",
     "create_download_artifact",
 ]
 

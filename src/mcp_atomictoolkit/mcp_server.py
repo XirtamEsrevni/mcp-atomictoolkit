@@ -448,7 +448,6 @@ async def autocorrelation_workflow(
     )
 
 
-@mcp.tool()
 async def build_structure(
     formula: str,
     structure_type: str = "bulk",
@@ -482,7 +481,6 @@ async def read_structure_file(filepath: str, format: Optional[str] = None) -> Di
     return await analyze_structure_workflow(filepath=filepath, format=format)
 
 
-@mcp.tool()
 async def write_structure_file(
     positions: List[List[float]],
     symbols: List[str],
@@ -500,7 +498,6 @@ async def write_structure_file(
     )
 
 
-@mcp.tool()
 async def optimize_with_mlip(
     input_filepath: str,
     input_format: Optional[str] = None,
