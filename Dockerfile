@@ -30,6 +30,9 @@ RUN add-apt-repository ppa:openkim/latest \
 
 ENV LD_LIBRARY_PATH="/usr/lib:/usr/local/lib"
 ENV PKG_CONFIG_PATH="/usr/lib/pkgconfig:/usr/local/lib/pkgconfig"
+ENV PIP_INDEX_URL="https://download.pytorch.org/whl/cpu"
+ENV PIP_EXTRA_INDEX_URL="https://pypi.org/simple"
+ENV PIP_PREFER_BINARY=1
 
 RUN python3.12 -m ensurepip --upgrade \
     && python3.12 -m pip install --no-cache-dir --upgrade pip \
