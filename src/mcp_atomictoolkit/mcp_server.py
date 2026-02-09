@@ -16,9 +16,11 @@ os.environ["CUDA_VISIBLE_DEVICES"] = ""
 os.environ["JAX_CUDA_VISIBLE_DEVICES"] = ""
 
 from fastmcp import FastMCP
+from fastmcp.server.tasks import TaskConfig
 
 from mcp_atomictoolkit.artifact_store import with_downloadable_artifacts
 from mcp_atomictoolkit.calculators import DEFAULT_CALCULATOR_NAME
+from mcp_atomictoolkit.task_support import apply_task_support_patches
 from mcp_atomictoolkit.workflows.core import (
     analyze_structure_workflow as analyze_structure_workflow_impl,
     analyze_trajectory_workflow as analyze_trajectory_workflow_impl,
@@ -30,8 +32,11 @@ from mcp_atomictoolkit.workflows.core import (
     write_structure_workflow as write_structure_workflow_impl,
 )
 
+apply_task_support_patches()
+
 mcp = FastMCP(
     "atomictoolkit",
+    tasks=True,
 )
 
 logger = logging.getLogger("mcp_atomictoolkit.tools")
@@ -189,7 +194,7 @@ def _run_tool(tool_name: str, impl: Callable[..., Dict], **kwargs: Any) -> Dict:
     return with_downloadable_artifacts(result)
 
 
-@mcp.tool()
+@mcp.tool(task=TaskConfig(mode="optional"))
 async def build_structure_workflow(
     formula: str,
     structure_type: str = "bulk",
@@ -237,7 +242,7 @@ async def build_structure_workflow(
     )
 
 
-@mcp.tool()
+@mcp.tool(task=TaskConfig(mode="optional"))
 async def analyze_structure_workflow(
     filepath: str,
     format: Optional[str] = None,
@@ -271,7 +276,7 @@ async def analyze_structure_workflow(
     )
 
 
-@mcp.tool()
+@mcp.tool(task=TaskConfig(mode="optional"))
 async def write_structure_workflow(
     positions: List[List[float]],
     symbols: List[str],
@@ -302,7 +307,7 @@ async def write_structure_workflow(
     )
 
 
-@mcp.tool()
+@mcp.tool(task=TaskConfig(mode="required"))
 async def optimize_structure_workflow(
     input_filepath: str,
     input_format: Optional[str] = None,
@@ -348,7 +353,7 @@ async def optimize_structure_workflow(
     )
 
 
-@mcp.tool()
+@mcp.tool(task=TaskConfig(mode="optional"))
 async def single_point_workflow(
     input_filepath: str,
     input_format: Optional[str] = None,
@@ -364,7 +369,7 @@ async def single_point_workflow(
     )
 
 
-@mcp.tool()
+@mcp.tool(task=TaskConfig(mode="required"))
 async def run_md_workflow(
     input_filepath: str,
     input_format: Optional[str] = None,
@@ -408,7 +413,7 @@ async def run_md_workflow(
     )
 
 
-@mcp.tool()
+@mcp.tool(task=TaskConfig(mode="required"))
 async def analyze_trajectory_workflow(
     filepath: str,
     format: Optional[str] = None,
@@ -434,7 +439,7 @@ async def analyze_trajectory_workflow(
     )
 
 
-@mcp.tool()
+@mcp.tool(task=TaskConfig(mode="required"))
 async def autocorrelation_workflow(
     filepath: str,
     format: Optional[str] = None,
@@ -529,7 +534,7 @@ async def optimize_with_mlip(
     )
 
 
-@mcp.tool()
+@mcp.tool(task=TaskConfig(mode="optional"))
 async def create_download_artifact(filepath: str) -> Dict:
     """Create a downloadable artifact URL for an existing file path."""
     return _run_tool("create_download_artifact", lambda filepath: {"filepath": filepath}, filepath=filepath)
