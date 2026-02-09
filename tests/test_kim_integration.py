@@ -31,7 +31,10 @@ def test_ase_kim_uses_first_model_for_si():
         pytest.skip("No OpenKIM models discovered for Si.")
     assert model_id == first_model_id
 
-    calc = calculators.get_kim_calculator(species=["Si"])
+    try:
+        calc = calculators.get_kim_calculator(species=["Si"])
+    except RuntimeError as exc:
+        pytest.skip(f"KIM model not available locally: {exc}")
     atoms = Atoms("Si2", positions=[[0, 0, 0], [2.35, 0, 0]], cell=[10, 10, 10], pbc=True)
     atoms.calc = calc
 
