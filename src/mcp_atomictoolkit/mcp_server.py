@@ -7,6 +7,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter
 from typing import Any, Callable, Dict, List, Optional
+os.environ["JAX_PLUGINS"] = ""
+os.environ["JAX_SKIP_JAXLIB_PJRT_CUDA_PLUGIN"] = "1"
+os.environ["JAX_SKIP_JAXLIB_PJRT_ROCM_PLUGIN"] = "1"
+os.environ["JAX_PLATFORMS"] = "cpu"
+os.environ["JAX_PLATFORM_NAME"] = "cpu"
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
+os.environ["JAX_CUDA_VISIBLE_DEVICES"] = ""
+
 from fastmcp import FastMCP
 
 from mcp_atomictoolkit.artifact_store import with_downloadable_artifacts
