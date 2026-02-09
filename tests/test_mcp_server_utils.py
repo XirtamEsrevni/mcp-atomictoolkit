@@ -7,12 +7,19 @@ import pytest
 
 def _load_mcp_server(monkeypatch):
     fastmcp_stub = types.ModuleType("fastmcp")
+    fastmcp_server_stub = types.ModuleType("fastmcp.server")
+    fastmcp_tasks_stub = types.ModuleType("fastmcp.server.tasks")
+
+    class TaskConfig:
+        def __init__(self, mode="optional"):
+            self.mode = mode
 
     class FakeFastMCP:
-        def __init__(self, name: str):
+        def __init__(self, name: str, tasks=None, **_kwargs):
             self.name = name
+            self.tasks = tasks
 
-        def tool(self):
+        def tool(self, *args, **_kwargs):
             def decorator(func):
                 return func
 
@@ -25,7 +32,18 @@ def _load_mcp_server(monkeypatch):
             return app
 
     fastmcp_stub.FastMCP = FakeFastMCP
+    fastmcp_tasks_stub.TaskConfig = TaskConfig
     monkeypatch.setitem(sys.modules, "fastmcp", fastmcp_stub)
+    monkeypatch.setitem(sys.modules, "fastmcp.server", fastmcp_server_stub)
+    monkeypatch.setitem(sys.modules, "fastmcp.server.tasks", fastmcp_tasks_stub)
+
+    task_support_stub = types.ModuleType("mcp_atomictoolkit.task_support")
+
+    def apply_task_support_patches():
+        return None
+
+    task_support_stub.apply_task_support_patches = apply_task_support_patches
+    monkeypatch.setitem(sys.modules, "mcp_atomictoolkit.task_support", task_support_stub)
 
     workflows_stub = types.ModuleType("mcp_atomictoolkit.workflows.core")
     for name in (
