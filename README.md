@@ -1,4 +1,4 @@
-# ⚛️ MCP Atomic Toolkit
+# ⚠️ MCP Atomic Toolkit
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
@@ -52,9 +52,32 @@ If you need atomistic workflows exposed as MCP tools (instead of hand-wiring scr
 
 ### 2) Install
 
+Core install does **not** require the OpenKIM C++ API:
+
 ```bash
 pip install -r requirements.txt
 ```
+
+or:
+
+```bash
+pip install -e .
+```
+
+OpenKIM (`kimpy`) is optional. It compiles against the system KIM API, so a default install used to fail on machines without `libkim-api`.
+
+To enable the KIM calculator:
+
+```bash
+# Debian/Ubuntu
+sudo apt-get install -y libkim-api-dev pkg-config
+
+pip install -e ".[kim]"
+```
+
+macOS (Homebrew): `brew install openkim-models kim-api` then `pip install -e ".[kim]"`.
+
+Without the extra, use `calculator_name='auto'`, `'orb'`, or `'nequix'`. Runtime code already falls back when KIM is missing.
 
 ### 3) Run locally
 
@@ -133,6 +156,8 @@ uvicorn mcp_atomictoolkit.http_app:app --host 0.0.0.0 --port $PORT
 ```
 
 ### Docker
+
+The image installs `libkim-api-dev` and the optional `[kim]` extra.
 
 ```bash
 docker build -t mcp-atomictoolkit .
@@ -219,7 +244,7 @@ Tune `temperature_K`, `friction`, and `taut` to control thermostat behavior.
 
 ### Star history
 
-[![Star History Chart](https://api.star-history.com/svg?repos=OWNER/REPO&type=Date)](https://star-history.com/#OWNER/REPO&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=XirtamEsrevni/mcp-atomictoolkit&type=Date)](https://star-history.com/#XirtamEsrevni/mcp-atomictoolkit&Date)
 
 ---
 
