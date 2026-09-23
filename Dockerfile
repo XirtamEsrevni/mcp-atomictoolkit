@@ -36,7 +36,7 @@ ENV PIP_PREFER_BINARY=1
 
 RUN python3.12 -m ensurepip --upgrade \
     && python3.12 -m pip install --no-cache-dir --upgrade pip \
-    && python3.12 -m pip install --no-cache-dir -r requirements.txt
+    && python3.12 -m pip install --no-cache-dir -e ".[kim]"
 
 EXPOSE 7860
 ENV HOST=0.0.0.0
