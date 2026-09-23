@@ -6,16 +6,21 @@ import warnings
 from typing import TYPE_CHECKING, Sequence
 
 if TYPE_CHECKING:
+    from ase.calculators.emt import EMT as EMTCalculator
+    from ase.calculators.kim.kim import KIM as KIMCalculator
     from nequix.calculator import NequixCalculator
     from orb_models.forcefield.calculator import ORBCalculator
-    from ase.calculators.kim.kim import KIM as KIMCalculator
 
 NEQUIX_DEFAULT_MODEL = "nequix-mp-1"
 NEQUIX_DEFAULT_BACKEND = "jax"
 KIM_DEFAULT_MODEL = "LJ_ElliottAkerson_2015_Universal__MO_959249795837_003"
+# Last-resort ASE EMT metals: Al, Cu, Ag, Au, Ni, Pd, Pt, and a few alloys.
+EMT_SUPPORTED_ELEMENTS = frozenset({"Al", "Cu", "Ag", "Au", "Ni", "Pd", "Pt"})
 # Default to auto-selection so low-resource environments can fall back when
 # heavyweight dependencies (e.g., KIM API) are unavailable.
 DEFAULT_CALCULATOR_NAME = "auto"
+MLIP_CANDIDATES = ("kim", "orb", "nequix")
+AUTO_CANDIDATES = MLIP_CANDIDATES + ("emt",)
 
 logger = logging.getLogger("mcp_atomictoolkit.calculators")
 
@@ -50,6 +55,9 @@ def _normalize_calculator_name(calculator_name: str) -> str:
         "openkim": "kim",
         "kim-model": "kim",
         "kim_model": "kim",
+        "ase-emt": "emt",
+        "ase_emt": "emt",
+        "effective-medium-theory": "emt",
     }
     return aliases.get(normalized, normalized)
 
@@ -138,6 +146,22 @@ def _select_kim_model_id(
     return str(first)
 
 
+def get_emt_calculator(
+    species: Sequence[str] | None = None,
+):
+    """Initialize ASE Effective Medium Theory calculator for supported metals."""
+    from ase.calculators.emt import EMT
+
+    normalized_species = _normalize_species(species)
+    unsupported = sorted(set(normalized_species) - EMT_SUPPORTED_ELEMENTS)
+    if unsupported:
+        raise ValueError(
+            "EMT does not support species "
+            f"{unsupported}. Supported elements: {sorted(EMT_SUPPORTED_ELEMENTS)}."
+        )
+    return EMT()
+
+
 def get_kim_calculator(
     species: Sequence[str] | None = None,
 ) -> "KIMCalculator":
@@ -181,25 +205,26 @@ def get_kim_calculator(
 def _get_calculator_by_key(
     calculator_key: str,
     species: Sequence[str] | None,
-) -> "ORBCalculator | NequixCalculator | KIMCalculator":
+) -> "ORBCalculator | NequixCalculator | KIMCalculator | EMTCalculator":
     if calculator_key == "orb":
         return get_orb_calculator()
     if calculator_key == "nequix":
         return get_nequix_calculator()
     if calculator_key == "kim":
         return get_kim_calculator(species=species)
+    if calculator_key == "emt":
+        return get_emt_calculator(species=species)
     raise ValueError(f"Unknown MLIP type: {calculator_key}")
 
 
 def resolve_calculator(
     calculator_name: str,
     species: Sequence[str] | None = None,
-) -> tuple["ORBCalculator | NequixCalculator | KIMCalculator", str, list[str]]:
+) -> tuple["ORBCalculator | NequixCalculator | KIMCalculator | EMTCalculator", str, list[str]]:
     """Resolve a calculator, optionally falling back when auto-selection is used."""
     calculator_key = _normalize_calculator_name(calculator_name)
-    available_candidates = ("kim", "orb", "nequix")
     if calculator_key == "auto":
-        candidates = available_candidates
+        candidates = AUTO_CANDIDATES
     else:
         candidates = (calculator_key,)
 
@@ -221,7 +246,7 @@ def resolve_calculator(
         return calculator, candidate, errors
 
     if calculator_key != "auto":
-        fallback_candidates = [c for c in available_candidates if c != calculator_key]
+        fallback_candidates = [c for c in AUTO_CANDIDATES if c != calculator_key]
         for candidate in fallback_candidates:
             attempted.append(candidate)
             try:
@@ -247,7 +272,7 @@ def resolve_calculator(
 def get_calculator(
     calculator_name: str,
     species: Sequence[str] | None = None,
-) -> "ORBCalculator | NequixCalculator | KIMCalculator":
+) -> "ORBCalculator | NequixCalculator | KIMCalculator | EMTCalculator":
     """Return an ASE calculator for the requested MLIP."""
     calculator, _used, _errors = resolve_calculator(
         calculator_name,
