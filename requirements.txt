@@ -1,1 +1,3 @@
 -e .
+# OpenKIM is optional and needs the system KIM API (libkim-api-dev).
+# Install with: pip install -e ".[kim]"
