@@ -14,7 +14,11 @@ from mcp_atomictoolkit.calculators import DEFAULT_CALCULATOR_NAME, resolve_calcu
 from mcp_atomictoolkit.io_handlers import read_structure, write_structure
 from mcp_atomictoolkit.md_runner import run_md
 from mcp_atomictoolkit.optimizers import optimize_structure
-from mcp_atomictoolkit.structure_operations import create_structure, get_structure_info
+from mcp_atomictoolkit.structure_operations import (
+    create_structure,
+    get_structure_info,
+    manipulate_structure,
+)
 
 
 def build_structure_workflow(
@@ -97,6 +101,30 @@ def analyze_structure_workflow(
         "info": get_structure_info(structure),
         "symbols": structure.get_chemical_symbols(),
         "analysis": analysis,
+    }
+
+
+def manipulate_structure_workflow(
+    input_filepath: str,
+    operation: str,
+    input_format: Optional[str] = None,
+    output_filepath: str = "manipulated.extxyz",
+    output_format: Optional[str] = None,
+    operation_kwargs: Optional[Dict] = None,
+) -> Dict:
+    """Apply a structure manipulation and write the result."""
+    structure = read_structure(input_filepath, input_format)
+    manipulated = manipulate_structure(structure, operation, **(operation_kwargs or {}))
+    write_structure(manipulated, output_filepath, output_format)
+    info = get_structure_info(manipulated)
+    return {
+        "status": "success",
+        "operation": operation,
+        "input_filepath": str(Path(input_filepath).absolute()),
+        "filepath": str(Path(output_filepath).absolute()),
+        "format": output_format or Path(output_filepath).suffix[1:],
+        "num_atoms": info.get("num_atoms"),
+        "cell": info.get("cell"),
     }
 
 
@@ -202,6 +230,9 @@ def run_md_workflow(
     friction: float = 0.02,
     taut: float = 100.0,
     trajectory_interval: int = 1,
+    pressure_GPa: float = 0.0,
+    taup: float = 1000.0,
+    compressibility_au: Optional[float] = None,
 ) -> Dict:
     """Run an MD simulation and return output paths and summary stats."""
     return run_md(
@@ -219,6 +250,9 @@ def run_md_workflow(
         friction=friction,
         taut=taut,
         trajectory_interval=trajectory_interval,
+        pressure_GPa=pressure_GPa,
+        taup=taup,
+        compressibility_au=compressibility_au,
     )
 
 

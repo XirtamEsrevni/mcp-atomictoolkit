@@ -17,3 +17,13 @@ def test_kim_bindings_are_optional_extras() -> None:
     assert not any(dep.startswith("kim-query") for dep in core)
     assert any(dep.startswith("kimpy") for dep in extras)
     assert any(dep.startswith("kim-query") for dep in extras)
+
+
+def test_fastmcp_and_mcp_are_pinned_below_breaking_majors() -> None:
+    core = _pyproject()["project"]["dependencies"]
+    fastmcp = next(dep for dep in core if dep.startswith("fastmcp"))
+    mcp = next(dep for dep in core if dep.startswith("mcp"))
+    assert "[tasks]" in fastmcp
+    assert "<4" in fastmcp
+    assert "<2" in mcp
+    assert any(dep.startswith("pydocket") for dep in core)
