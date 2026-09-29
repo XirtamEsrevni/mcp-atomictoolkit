@@ -24,6 +24,6 @@ def test_fastmcp_and_mcp_are_pinned_below_breaking_majors() -> None:
     fastmcp = next(dep for dep in core if dep.startswith("fastmcp"))
     mcp = next(dep for dep in core if dep.startswith("mcp"))
     assert "[tasks]" in fastmcp
-    assert "<4" in fastmcp
+    assert "<3" in fastmcp
     assert "<2" in mcp
     assert any(dep.startswith("pydocket") for dep in core)
