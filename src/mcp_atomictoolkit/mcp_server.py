@@ -26,7 +26,12 @@ from mcp_atomictoolkit.workflows.core import (
     analyze_trajectory_workflow as analyze_trajectory_workflow_impl,
     autocorrelation_workflow as autocorrelation_workflow_impl,
     build_structure_workflow as build_structure_workflow_impl,
+    estimate_elastic_workflow as estimate_elastic_workflow_impl,
+    import_structure_workflow as import_structure_workflow_impl,
+    list_workspace_capabilities_workflow as list_workspace_capabilities_workflow_impl,
+    manipulate_structure_workflow as manipulate_structure_workflow_impl,
     optimize_structure_workflow as optimize_structure_workflow_impl,
+    relax_and_md_workflow as relax_and_md_workflow_impl,
     run_md_workflow as run_md_workflow_impl,
     single_point_workflow as single_point_workflow_impl,
     write_structure_workflow as write_structure_workflow_impl,
@@ -70,11 +75,11 @@ def _error_hints(tool_name: str, kwargs: Dict[str, Any], exc: Exception) -> List
             )
     if "no such file" in msg or "not found" in msg:
         hints.append("Verify file paths are correct and that prior workflow steps completed successfully.")
-    if tool_name in {"optimize_structure_workflow", "run_md_workflow", "analyze_trajectory_workflow"}:
+    if tool_name in {"optimize_structure_workflow", "run_md_workflow", "analyze_trajectory_workflow", "relax_and_md_workflow"}:
         hints.append("Use returned artifact download_url links for trajectory/log/analysis files instead of regenerating files manually.")
     if "kimpy" in msg or "kim api" in msg or "openkim" in msg:
         hints.append(
-            "KIM dependencies are missing. Either install kimpy/KIM API on the server or set calculator_name to 'auto', 'orb', or 'nequix' to use an available backend."
+            "KIM dependencies are missing. Set calculator_name to 'auto' or 'emt' for supported metals, or use 'orb'/'nequix' if those extras are installed."
         )
     if isinstance(exc, MemoryError) or any(signal in msg for signal in oom_signals):
         hints.append(
@@ -195,6 +200,15 @@ def _run_tool(tool_name: str, impl: Callable[..., Dict], **kwargs: Any) -> Dict:
 
 
 @mcp.tool(task=TaskConfig(mode="optional"))
+async def list_workspace_capabilities_workflow() -> Dict:
+    """List calculators, integrators, structure types, and edit operations."""
+    return _run_tool(
+        "list_workspace_capabilities_workflow",
+        list_workspace_capabilities_workflow_impl,
+    )
+
+
+@mcp.tool(task=TaskConfig(mode="optional"))
 async def build_structure_workflow(
     formula: str,
     structure_type: str = "bulk",
@@ -222,9 +236,6 @@ async def build_structure_workflow(
         output_filepath: Output file path for the built structure
         output_format: Output file format (optional)
         builder_kwargs: Extra builder-specific parameters
-
-    Returns:
-        Dict containing structure metadata
     """
     return _run_tool(
         "build_structure_workflow",
@@ -243,6 +254,46 @@ async def build_structure_workflow(
 
 
 @mcp.tool(task=TaskConfig(mode="optional"))
+async def import_structure_workflow(
+    contents: str,
+    input_format: str = "xyz",
+    output_filepath: str = "imported.extxyz",
+    output_format: Optional[str] = None,
+) -> Dict:
+    """Import a structure from xyz/cif/poscar text and write it to disk."""
+    return _run_tool(
+        "import_structure_workflow",
+        import_structure_workflow_impl,
+        contents=contents,
+        input_format=input_format,
+        output_filepath=output_filepath,
+        output_format=output_format,
+    )
+
+
+@mcp.tool(task=TaskConfig(mode="optional"))
+async def manipulate_structure_workflow(
+    input_filepath: str,
+    operation: str,
+    input_format: Optional[str] = None,
+    output_filepath: str = "manipulated.extxyz",
+    output_format: Optional[str] = None,
+    operation_kwargs: Optional[Dict] = None,
+) -> Dict:
+    """Edit a structure: rotate, translate, strain, supercell, wrap, vacancy, substitute, interstitial."""
+    return _run_tool(
+        "manipulate_structure_workflow",
+        manipulate_structure_workflow_impl,
+        input_filepath=input_filepath,
+        operation=operation,
+        input_format=input_format,
+        output_filepath=output_filepath,
+        output_format=output_format,
+        operation_kwargs=operation_kwargs,
+    )
+
+
+@mcp.tool(task=TaskConfig(mode="optional"))
 async def analyze_structure_workflow(
     filepath: str,
     format: Optional[str] = None,
@@ -253,15 +304,7 @@ async def analyze_structure_workflow(
     coordination_factor: float = 1.2,
     plot_formats: Optional[List[str]] = None,
 ) -> Dict:
-    """Analyze structure file and return metadata.
-
-    Args:
-        filepath: Path to structure file
-        format: File format (optional, guessed from extension if not provided)
-
-    Returns:
-        Dict containing structure metadata
-    """
+    """Analyze structure file and return metadata."""
     return _run_tool(
         "analyze_structure_workflow",
         analyze_structure_workflow_impl,
@@ -284,18 +327,7 @@ async def write_structure_workflow(
     filepath: str,
     format: Optional[str] = None,
 ) -> Dict:
-    """Write structure to file and return metadata.
-
-    Args:
-        positions: Atomic positions
-        symbols: Chemical symbols
-        cell: Unit cell vectors
-        filepath: Output file path
-        format: File format (optional, guessed from extension if not provided)
-
-    Returns:
-        Dict with status and file info
-    """
+    """Write structure to file and return metadata."""
     return _run_tool(
         "write_structure_workflow",
         write_structure_workflow_impl,
@@ -320,23 +352,7 @@ async def optimize_structure_workflow(
     maxstep: float = 0.04,
     alpha: float = 70.0,
 ) -> Dict:
-    """Optimize structure using MLIP and return metadata.
-
-    Args:
-        input_filepath: Path to structure file
-        input_format: File format (optional)
-        output_filepath: Output file path
-        output_format: Output file format (optional)
-        calculator_name: Type of MLIP ('auto', 'kim', 'nequix', or 'orb'). Defaults to auto.
-        max_steps: Maximum optimization steps
-        fmax: Force convergence criterion
-        constraints: Constraint settings (fixed atoms/cell/bonds)
-        maxstep: Maximum step size for the optimizer (Angstrom)
-        alpha: BFGS damping parameter
-
-    Returns:
-        Dict containing optimized structure metadata
-    """
+    """Optimize structure using an available calculator (auto/kim/orb/nequix/emt)."""
     return _run_tool(
         "optimize_structure_workflow",
         optimize_structure_workflow_impl,
@@ -369,6 +385,24 @@ async def single_point_workflow(
     )
 
 
+@mcp.tool(task=TaskConfig(mode="optional"))
+async def estimate_elastic_workflow(
+    input_filepath: str,
+    input_format: Optional[str] = None,
+    calculator_name: str = DEFAULT_CALCULATOR_NAME,
+    strain_max: float = 0.02,
+) -> Dict:
+    """Estimate isotropic bulk modulus from a 5-point energy-vs-strain fit."""
+    return _run_tool(
+        "estimate_elastic_workflow",
+        estimate_elastic_workflow_impl,
+        input_filepath=input_filepath,
+        input_format=input_format,
+        calculator_name=calculator_name,
+        strain_max=strain_max,
+    )
+
+
 @mcp.tool(task=TaskConfig(mode="required"))
 async def run_md_workflow(
     input_filepath: str,
@@ -385,14 +419,11 @@ async def run_md_workflow(
     friction: float = 0.02,
     taut: float = 100.0,
     trajectory_interval: int = 1,
+    pressure_GPa: float = 0.0,
+    taup: float = 1000.0,
+    compressibility_au: Optional[float] = None,
 ) -> Dict:
-    """Run molecular dynamics workflow and return outputs.
-
-    Integrator options:
-        - velocityverlet / nve
-        - langevin / nvt-langevin
-        - nvt / nvt-berendsen
-    """
+    """Run molecular dynamics (NVE, Langevin, NVT Berendsen, or NPT Berendsen)."""
     return _run_tool(
         "run_md_workflow",
         run_md_workflow_impl,
@@ -410,6 +441,49 @@ async def run_md_workflow(
         friction=friction,
         taut=taut,
         trajectory_interval=trajectory_interval,
+        pressure_GPa=pressure_GPa,
+        taup=taup,
+        compressibility_au=compressibility_au,
+    )
+
+
+@mcp.tool(task=TaskConfig(mode="required"))
+async def relax_and_md_workflow(
+    input_filepath: str,
+    input_format: Optional[str] = None,
+    optimized_filepath: str = "relaxed.extxyz",
+    output_trajectory_filepath: str = "md.extxyz",
+    log_filepath: str = "md.log",
+    summary_filepath: str = "md_summary.txt",
+    calculator_name: str = DEFAULT_CALCULATOR_NAME,
+    max_steps: int = 50,
+    fmax: float = 0.1,
+    integrator: str = "npt",
+    timestep_fs: float = 1.0,
+    temperature_K: float = 300.0,
+    steps: int = 100,
+    trajectory_interval: int = 1,
+    pressure_GPa: float = 0.0,
+) -> Dict:
+    """Relax a structure then run MD in one call."""
+    return _run_tool(
+        "relax_and_md_workflow",
+        relax_and_md_workflow_impl,
+        input_filepath=input_filepath,
+        input_format=input_format,
+        optimized_filepath=optimized_filepath,
+        output_trajectory_filepath=output_trajectory_filepath,
+        log_filepath=log_filepath,
+        summary_filepath=summary_filepath,
+        calculator_name=calculator_name,
+        max_steps=max_steps,
+        fmax=fmax,
+        integrator=integrator,
+        timestep_fs=timestep_fs,
+        temperature_K=temperature_K,
+        steps=steps,
+        trajectory_interval=trajectory_interval,
+        pressure_GPa=pressure_GPa,
     )
 
 
@@ -461,6 +535,7 @@ async def autocorrelation_workflow(
     )
 
 
+@mcp.tool()
 async def build_structure(
     formula: str,
     structure_type: str = "bulk",
@@ -494,6 +569,7 @@ async def read_structure_file(filepath: str, format: Optional[str] = None) -> Di
     return await analyze_structure_workflow(filepath=filepath, format=format)
 
 
+@mcp.tool()
 async def write_structure_file(
     positions: List[List[float]],
     symbols: List[str],
@@ -511,6 +587,7 @@ async def write_structure_file(
     )
 
 
+@mcp.tool()
 async def optimize_with_mlip(
     input_filepath: str,
     input_format: Optional[str] = None,
