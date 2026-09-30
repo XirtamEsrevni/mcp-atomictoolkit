@@ -18,7 +18,10 @@ from starlette.responses import FileResponse, JSONResponse, RedirectResponse, Re
 from starlette.routing import Mount, Route
 
 from mcp_atomictoolkit.artifact_store import artifact_store, reset_request_base_url, set_request_base_url
-from mcp_atomictoolkit.mcp_server import mcp
+from mcp_atomictoolkit.extra_tools import register_extra_tools
+from mcp_atomictoolkit.mcp_server import _run_tool, mcp
+
+register_extra_tools(mcp, _run_tool)
 
 
 class _PathRewriteApp:
@@ -140,12 +143,17 @@ TOOL_NAMES = [
     "list_workspace_capabilities_workflow",
     "build_structure_workflow",
     "import_structure_workflow",
+    "convert_structure_workflow",
+    "standardize_cell_workflow",
     "manipulate_structure_workflow",
     "analyze_structure_workflow",
     "write_structure_workflow",
     "optimize_structure_workflow",
     "single_point_workflow",
     "estimate_elastic_workflow",
+    "equation_of_state_workflow",
+    "vacancy_formation_workflow",
+    "add_adsorbate_workflow",
     "run_md_workflow",
     "relax_and_md_workflow",
     "analyze_trajectory_workflow",
@@ -176,7 +184,7 @@ async def handle_server_card(request: Request) -> JSONResponse:
         {
             "name": "atomictoolkit",
             "displayName": "Atomistic Toolkit MCP",
-            "description": "MCP server for atomistic structure generation, defects, analysis, optimization, elasticity, and molecular dynamics using ASE, pymatgen, EMT, Nequix, and Orb.",
+            "description": "MCP server for atomistic structure generation, defects, surfaces, elasticity, EOS, and molecular dynamics.",
             "version": "0.1.0",
             "homepage": base_url,
             "documentationUrl": f"{base_url}/docs",
