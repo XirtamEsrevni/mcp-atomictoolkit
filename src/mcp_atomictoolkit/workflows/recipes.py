@@ -3,17 +3,35 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 from ase.build import add_adsorbate, molecule, surface
 from ase.eos import EquationOfState
-from ase.io import write as ase_write
 from pymatgen.io.ase import AseAtomsAdaptor
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
 from mcp_atomictoolkit.calculators import DEFAULT_CALCULATOR_NAME, resolve_calculator
 from mcp_atomictoolkit.io_handlers import get_supported_formats, read_structure, write_structure
 from mcp_atomictoolkit.structure_operations import get_structure_info, manipulate_structure
+
+
+def _resolve_adsorbate_position(atoms, position: Union[str, Sequence[float]]) -> Union[str, Tuple[float, float]]:
+    if not isinstance(position, str):
+        coords = list(position)
+        if len(coords) < 2:
+            raise ValueError("position coordinates must be (x, y)")
+        return (float(coords[0]), float(coords[1]))
+    if atoms.info.get("adsorbate_info"):
+        return position
+    # Generic slabs from files or ase.build.surface have no named-site map.
+    xy_sites = {
+        "ontop": (0.0, 0.0),
+        "bridge": (atoms.cell[0, 0] * 0.5, 0.0),
+        "hollow": (atoms.cell[0, 0] * 1.0 / 3.0, atoms.cell[1, 1] * 1.0 / 3.0),
+        "fcc": (atoms.cell[0, 0] * 1.0 / 3.0, atoms.cell[1, 1] * 1.0 / 3.0),
+        "hcp": (atoms.cell[0, 0] * 2.0 / 3.0, atoms.cell[1, 1] * 2.0 / 3.0),
+    }
+    return xy_sites.get(position.lower(), (0.0, 0.0))
 
 
 def convert_structure_workflow(
@@ -160,7 +178,7 @@ def add_adsorbate_workflow(
     input_format: Optional[str] = None,
     output_filepath: str = "adsorbed.extxyz",
     height: float = 1.8,
-    position: str = "ontop",
+    position: Union[str, Sequence[float]] = "ontop",
     make_slab: bool = False,
     miller_indices: Sequence[int] = (1, 1, 1),
     layers: int = 3,
@@ -174,13 +192,15 @@ def add_adsorbate_workflow(
         adsorbate_atoms = molecule(adsorbate)
     except Exception:
         adsorbate_atoms = adsorbate
-    add_adsorbate(atoms, adsorbate_atoms, height=height, position=position)
+    resolved = _resolve_adsorbate_position(atoms, position)
+    add_adsorbate(atoms, adsorbate_atoms, height=height, position=resolved)
     write_structure(atoms, output_filepath)
     info = get_structure_info(atoms)
     return {
         "status": "success",
         "adsorbate": adsorbate,
         "position": position,
+        "resolved_position": list(resolved) if not isinstance(resolved, str) else resolved,
         "height": height,
         "filepath": str(Path(output_filepath).absolute()),
         "num_atoms": info.get("num_atoms"),
