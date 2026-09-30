@@ -1,6 +1,6 @@
 """Core structure manipulation operations using ASE."""
 
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence
 
 import numpy as np
 from ase import Atoms
@@ -9,6 +9,27 @@ from ase.calculators.emt import EMT
 from ase.optimize import BFGS
 from pymatgen.core import Composition, Structure
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
+
+STRUCTURE_TYPES = (
+    "bulk",
+    "surface",
+    "molecule",
+    "supercell",
+    "amorphous",
+    "liquid",
+    "bicrystal",
+    "polycrystal",
+)
+MANIPULATE_OPERATIONS = (
+    "rotate",
+    "translate",
+    "strain",
+    "supercell",
+    "wrap",
+    "vacancy",
+    "substitute",
+    "interstitial",
+)
 
 
 def _resolve_cell(
@@ -95,23 +116,7 @@ def create_structure(
     cell_size: Optional[Sequence[float]] = None,
     **kwargs,
 ) -> Atoms:
-    """Create atomic structure based on type and parameters.
-
-    Args:
-        formula: Chemical formula
-        structure_type: Type of structure
-            ('bulk', 'surface', 'molecule', 'supercell', 'amorphous', 'liquid',
-            'bicrystal', 'polycrystal')
-        crystal_system: Crystal system for bulk
-        lattice_constant: Lattice constant in Angstroms
-        pbc: Periodic boundary condition flags
-        cell: Explicit cell matrix (3x3)
-        cell_size: Cell lengths (a, b, c) if cell not provided
-        **kwargs: Additional parameters for specific structure types
-
-    Returns:
-        ASE Atoms object
-    """
+    """Create atomic structure based on type and parameters."""
     incompatible_cubic_crystals = {"hcp", "rhombohedral", "trigonal", "hexagonal"}
     requested_cubic = kwargs.get("cubic")
     default_cubic = crystal_system.lower() not in incompatible_cubic_crystals
@@ -215,16 +220,8 @@ def create_structure(
 
 
 def manipulate_structure(atoms: Atoms, operation: str, **kwargs) -> Atoms:
-    """Perform structure manipulation operations.
-
-    Args:
-        atoms: Input structure
-        operation: Operation to perform
-        **kwargs: Operation-specific parameters
-
-    Returns:
-        Modified structure
-    """
+    """Perform structure manipulation operations without mutating the input."""
+    atoms = atoms.copy()
     if operation == "rotate":
         atoms.rotate(
             kwargs.get("angle", 90),
@@ -235,26 +232,46 @@ def manipulate_structure(atoms: Atoms, operation: str, **kwargs) -> Atoms:
         atoms.translate(kwargs.get("vector", [0, 0, 1]))
     elif operation == "strain":
         strain = kwargs.get("strain", 0.02)
-        atoms.cell *= 1 + strain
+        atoms.set_cell(atoms.cell * (1 + strain), scale_atoms=True)
         atoms.wrap()
     elif operation == "supercell":
         atoms = atoms * kwargs.get("size", (2, 2, 2))
+    elif operation == "wrap":
+        atoms.wrap()
+    elif operation == "vacancy":
+        index = int(kwargs.get("index", 0))
+        if index < 0 or index >= len(atoms):
+            raise ValueError(f"vacancy index {index} is out of range for {len(atoms)} atoms")
+        del atoms[index]
+    elif operation == "substitute":
+        index = int(kwargs.get("index", 0))
+        symbol = kwargs.get("symbol")
+        if not symbol:
+            raise ValueError("substitute requires 'symbol'")
+        if index < 0 or index >= len(atoms):
+            raise ValueError(f"substitute index {index} is out of range for {len(atoms)} atoms")
+        symbols = atoms.get_chemical_symbols()
+        symbols[index] = str(symbol)
+        atoms.set_chemical_symbols(symbols)
+    elif operation == "interstitial":
+        symbol = kwargs.get("symbol")
+        if not symbol:
+            raise ValueError("interstitial requires 'symbol'")
+        position = kwargs.get("position")
+        if position is None:
+            position = atoms.get_center_of_mass()
+        extra = Atoms(symbols=[str(symbol)], positions=[list(position)], cell=atoms.cell, pbc=atoms.pbc)
+        atoms = atoms + extra
     else:
-        raise ValueError(f"Unknown operation: {operation}")
+        raise ValueError(
+            f"Unknown operation: {operation}. Supported: {', '.join(MANIPULATE_OPERATIONS)}."
+        )
 
     return atoms
 
 
 def get_structure_info(atoms: Atoms) -> Dict:
-    """Get detailed information about structure.
-
-    Args:
-        atoms: Input structure
-
-    Returns:
-        Dictionary with structure information
-    """
-    # Convert to pymatgen structure for analysis
+    """Get detailed information about structure."""
     lattice = atoms.cell.array
     species = atoms.get_chemical_symbols()
     coords = atoms.get_scaled_positions()
