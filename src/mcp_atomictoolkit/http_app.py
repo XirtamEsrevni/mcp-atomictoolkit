@@ -175,7 +175,18 @@ def _public_base_url(request: Request) -> str:
 
 
 async def handle_healthz(request: Request) -> JSONResponse:
-    return JSONResponse({"status": "ok"})
+    from mcp_atomictoolkit.deploy_profile import current_profile
+
+    profile = current_profile()
+    return JSONResponse(
+        {
+            "status": "ok",
+            "memory_profile": profile.name,
+            "max_atoms": profile.max_atoms,
+            "max_md_steps": profile.max_md_steps,
+            "allowed_calculators": list(profile.allowed_calculators),
+        }
+    )
 
 
 async def handle_server_card(request: Request) -> JSONResponse:
