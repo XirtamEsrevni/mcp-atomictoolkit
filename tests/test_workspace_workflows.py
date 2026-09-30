@@ -1,6 +1,8 @@
 from pathlib import Path
 
-from mcp_atomictoolkit.structure_operations import manipulate_structure
+from ase.build import bulk
+
+from mcp_atomictoolkit.structure_operations import get_structure_info, manipulate_structure
 from mcp_atomictoolkit.workflows.core import (
     build_structure_workflow,
     estimate_elastic_workflow,
@@ -45,15 +47,30 @@ def test_import_and_defect_edits(tmp_path: Path) -> None:
     )
     assert "Ag" in alloyed["formula"]
 
+    wrapped = manipulate_structure_workflow(
+        input_filepath=imported["filepath"],
+        operation="wrap",
+        output_filepath=str(tmp_path / "wrap.xyz"),
+    )
+    assert wrapped["num_atoms"] == 2
+
+    stuffed = manipulate_structure_workflow(
+        input_filepath=imported["filepath"],
+        operation="interstitial",
+        output_filepath=str(tmp_path / "int.xyz"),
+        operation_kwargs={"symbol": "Ni", "position": [0.9, 0.9, 0.9]},
+    )
+    assert stuffed["num_atoms"] == 3
+
 
 def test_manipulate_does_not_mutate_input() -> None:
-    from ase.build import bulk
-
     atoms = bulk("Cu", "fcc", a=3.6, cubic=True)
     original = len(atoms)
     edited = manipulate_structure(atoms, "vacancy", index=0)
     assert len(atoms) == original
     assert len(edited) == original - 1
+    info = get_structure_info(atoms)
+    assert info["volume"] > 0
 
 
 def test_elastic_and_relax_md_with_emt(tmp_path: Path) -> None:
