@@ -1,9 +1,10 @@
-# ⚠️ MCP Atomic Toolkit
+# MCP Atomic Toolkit
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-Streamable%20HTTP-7A3EFF)](https://modelcontextprotocol.io/)
 [![tests](https://github.com/XirtamEsrevni/mcp-atomictoolkit/actions/workflows/tests.yml/badge.svg)](https://github.com/XirtamEsrevni/mcp-atomictoolkit/actions/workflows/tests.yml)
+[![smithery badge](https://smithery.ai/badge/science/mcp-atomictoolkit)](https://smithery.ai/servers/science/mcp-atomictoolkit)
 
 > [!NOTE]
 > This project is under active development. Interfaces and behavior may evolve.
