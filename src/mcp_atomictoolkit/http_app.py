@@ -66,13 +66,7 @@ class _ArtifactBaseUrlContextApp:
 
 
 class _AcceptHeaderCompatApp:
-    """ASGI adapter that tolerates MCP scanners with missing Accept headers.
-
-    Some directory scanners POST JSON-RPC requests without an explicit
-    ``Accept`` header. FastMCP's Streamable HTTP transport rejects those
-    requests with ``406 Not Acceptable``. To improve interoperability, we
-    synthesize an MCP-compatible Accept value when it is absent.
-    """
+    """ASGI adapter that tolerates MCP scanners with missing Accept headers."""
 
     _required_accept = b"application/json, text/event-stream"
 
@@ -127,7 +121,6 @@ class _RootInfoApp:
         await self.app(scope, receive, send)
 
 
-# Primary MCP endpoint expected by Smithery and most registries.
 _mcp_root_app = _ArtifactBaseUrlContextApp(
     _AcceptHeaderCompatApp(
         _RootInfoApp(
@@ -144,13 +137,17 @@ _mcp_root_app = _ArtifactBaseUrlContextApp(
 
 README_PATH = Path(__file__).resolve().parents[2] / "README.md"
 TOOL_NAMES = [
+    "list_workspace_capabilities_workflow",
     "build_structure_workflow",
+    "import_structure_workflow",
     "manipulate_structure_workflow",
     "analyze_structure_workflow",
     "write_structure_workflow",
     "optimize_structure_workflow",
     "single_point_workflow",
+    "estimate_elastic_workflow",
     "run_md_workflow",
+    "relax_and_md_workflow",
     "analyze_trajectory_workflow",
     "autocorrelation_workflow",
     "build_structure",
@@ -162,7 +159,6 @@ TOOL_NAMES = [
 
 
 def _public_base_url(request: Request) -> str:
-    """Compute public base URL, honoring reverse-proxy headers."""
     forwarded_proto = request.headers.get("x-forwarded-proto")
     forwarded_host = request.headers.get("x-forwarded-host")
     if forwarded_proto and forwarded_host:
@@ -175,13 +171,12 @@ async def handle_healthz(request: Request) -> JSONResponse:
 
 
 async def handle_server_card(request: Request) -> JSONResponse:
-    """Serve MCP server-card for directory scanners (e.g., Smithery)."""
     base_url = _public_base_url(request)
     return JSONResponse(
         {
             "name": "atomictoolkit",
             "displayName": "Atomistic Toolkit MCP",
-            "description": "MCP server for atomistic structure generation, analysis, optimization, and molecular dynamics using ASE, pymatgen, Nequix, and Orb.",
+            "description": "MCP server for atomistic structure generation, defects, analysis, optimization, elasticity, and molecular dynamics using ASE, pymatgen, EMT, Nequix, and Orb.",
             "version": "0.1.0",
             "homepage": base_url,
             "documentationUrl": f"{base_url}/docs",
@@ -201,21 +196,14 @@ async def handle_server_card(request: Request) -> JSONResponse:
                 ],
             },
             "transports": [
-                {
-                    "type": "streamable-http",
-                    "url": f"{base_url}/",
-                },
-                {
-                    "type": "streamable-http",
-                    "url": f"{base_url}/sse/",
-                },
+                {"type": "streamable-http", "url": f"{base_url}/"},
+                {"type": "streamable-http", "url": f"{base_url}/sse/"},
             ],
         }
     )
 
 
 async def handle_artifact_download(request: Request):
-    """Serve generated artifacts with disposition based on media type."""
     artifact_id = request.path_params["artifact_id"]
     record = artifact_store.get(artifact_id)
     if record is None or not record.filepath.exists():
@@ -231,7 +219,6 @@ async def handle_artifact_download(request: Request):
 
 
 async def handle_docs(request: Request) -> Response:
-    """Serve a lightweight documentation page for the server card link."""
     if not README_PATH.exists():
         return JSONResponse({"error": "documentation_not_found"}, status_code=404)
     return FileResponse(
@@ -242,7 +229,6 @@ async def handle_docs(request: Request) -> Response:
 
 
 async def handle_sse_no_slash(request: Request):
-    """Normalize /sse -> /sse/ so the mounted compatibility app handles it."""
     return RedirectResponse(url="/sse/", status_code=307)
 
 

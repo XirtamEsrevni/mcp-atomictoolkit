@@ -21,14 +21,22 @@ EMT_SUPPORTED_ELEMENTS = frozenset({"Al", "Cu", "Ag", "Au", "Ni", "Pd", "Pt"})
 DEFAULT_CALCULATOR_NAME = "auto"
 MLIP_CANDIDATES = ("kim", "orb", "nequix")
 AUTO_CANDIDATES = MLIP_CANDIDATES + ("emt",)
+INTEGRATORS = (
+    "velocityverlet",
+    "nve",
+    "langevin",
+    "nvt-langevin",
+    "nvt",
+    "nvt-berendsen",
+    "npt",
+    "npt-berendsen",
+)
 
 logger = logging.getLogger("mcp_atomictoolkit.calculators")
 
 
 def _configure_jax_for_cpu() -> None:
     """Force JAX/Nequix execution on CPU-only runtimes."""
-    # We intentionally overwrite these values to guarantee CPU execution even
-    # when a hosting environment pre-sets GPU defaults.
     os.environ["JAX_PLUGINS"] = ""
     os.environ["JAX_SKIP_JAXLIB_PJRT_CUDA_PLUGIN"] = "1"
     os.environ["JAX_SKIP_JAXLIB_PJRT_ROCM_PLUGIN"] = "1"
@@ -38,8 +46,6 @@ def _configure_jax_for_cpu() -> None:
     os.environ["JAX_CUDA_VISIBLE_DEVICES"] = ""
 
 
-# Configure CPU-only defaults as soon as this module is imported so that any
-# later JAX imports (triggered inside Nequix) inherit the safe environment.
 _configure_jax_for_cpu()
 
 
@@ -279,3 +285,43 @@ def get_calculator(
         species=species,
     )
     return calculator
+
+
+def _probe_import(calculator_key: str) -> tuple[bool, str | None]:
+    try:
+        if calculator_key == "emt":
+            from ase.calculators.emt import EMT  # noqa: F401
+        elif calculator_key == "kim":
+            from ase.calculators.kim.kim import KIM  # noqa: F401
+        elif calculator_key == "orb":
+            import orb_models  # noqa: F401
+        elif calculator_key == "nequix":
+            import nequix  # noqa: F401
+        else:
+            return False, f"unknown calculator {calculator_key}"
+    except Exception as exc:
+        return False, str(exc)
+    return True, None
+
+
+def describe_calculator_workspace() -> dict:
+    """Describe calculator, integrator, and structure capabilities."""
+    from mcp_atomictoolkit.structure_operations import MANIPULATE_OPERATIONS, STRUCTURE_TYPES
+
+    calculators = {}
+    for key in AUTO_CANDIDATES:
+        available, error = _probe_import(key)
+        payload = {"available": available}
+        if error:
+            payload["error"] = error
+        if key == "emt":
+            payload["supported_elements"] = sorted(EMT_SUPPORTED_ELEMENTS)
+        calculators[key] = payload
+    return {
+        "default_calculator": DEFAULT_CALCULATOR_NAME,
+        "auto_order": list(AUTO_CANDIDATES),
+        "calculators": calculators,
+        "integrators": list(INTEGRATORS),
+        "structure_types": list(STRUCTURE_TYPES),
+        "manipulate_operations": list(MANIPULATE_OPERATIONS),
+    }
