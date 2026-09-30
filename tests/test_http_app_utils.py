@@ -49,6 +49,10 @@ def _load_http_app(monkeypatch):
     monkeypatch.setitem(sys.modules, "starlette.responses", starlette_responses)
     monkeypatch.setitem(sys.modules, "starlette.routing", starlette_routing)
 
+    extra_tools_stub = types.ModuleType("mcp_atomictoolkit.extra_tools")
+    extra_tools_stub.register_extra_tools = lambda *_args, **_kwargs: None
+    monkeypatch.setitem(sys.modules, "mcp_atomictoolkit.extra_tools", extra_tools_stub)
+
     mcp_server_stub = types.ModuleType("mcp_atomictoolkit.mcp_server")
 
     class FakeMCP:
@@ -59,6 +63,7 @@ def _load_http_app(monkeypatch):
             return app
 
     mcp_server_stub.mcp = FakeMCP()
+    mcp_server_stub._run_tool = lambda *args, **kwargs: {}
     monkeypatch.setitem(sys.modules, "mcp_atomictoolkit.mcp_server", mcp_server_stub)
 
     sys.modules.pop("mcp_atomictoolkit.http_app", None)
@@ -136,6 +141,8 @@ def test_handle_server_card_points_to_docs_and_static_lists(monkeypatch):
     assert "build_structure_workflow" in tool_names
     assert "create_download_artifact" in tool_names
     assert "read_structure_file" in tool_names
+    assert "equation_of_state_workflow" in tool_names
+    assert "vacancy_formation_workflow" in tool_names
 
 
 def test_handle_docs_serves_readme(monkeypatch, tmp_path):
