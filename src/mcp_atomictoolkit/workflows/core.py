@@ -2,15 +2,22 @@
 
 from __future__ import annotations
 
+from io import StringIO
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence
 
-from ase import Atoms
+import numpy as np
+from ase import Atoms, units
+from ase.io import read as ase_read
 
 from mcp_atomictoolkit.analysis.autocorrelation import analyze_vacf
 from mcp_atomictoolkit.analysis.structure import analyze_structure
 from mcp_atomictoolkit.analysis.trajectory import analyze_trajectory
-from mcp_atomictoolkit.calculators import DEFAULT_CALCULATOR_NAME, resolve_calculator
+from mcp_atomictoolkit.calculators import (
+    DEFAULT_CALCULATOR_NAME,
+    describe_calculator_workspace,
+    resolve_calculator,
+)
 from mcp_atomictoolkit.io_handlers import read_structure, write_structure
 from mcp_atomictoolkit.md_runner import run_md
 from mcp_atomictoolkit.optimizers import optimize_structure
@@ -124,8 +131,35 @@ def manipulate_structure_workflow(
         "filepath": str(Path(output_filepath).absolute()),
         "format": output_format or Path(output_filepath).suffix[1:],
         "num_atoms": info.get("num_atoms"),
+        "formula": info.get("formula"),
         "cell": info.get("cell"),
     }
+
+
+def import_structure_workflow(
+    contents: str,
+    input_format: str = "xyz",
+    output_filepath: str = "imported.extxyz",
+    output_format: Optional[str] = None,
+) -> Dict:
+    """Import a structure from text (xyz/cif/poscar) and write it to disk."""
+    atoms = ase_read(StringIO(contents), format=input_format)
+    write_structure(atoms, output_filepath, output_format)
+    info = get_structure_info(atoms)
+    return {
+        "status": "success",
+        "input_format": input_format,
+        "filepath": str(Path(output_filepath).absolute()),
+        "format": output_format or Path(output_filepath).suffix[1:],
+        "formula": info.get("formula"),
+        "num_atoms": info.get("num_atoms"),
+        "cell": info.get("cell"),
+    }
+
+
+def list_workspace_capabilities_workflow() -> Dict:
+    """Describe calculators, integrators, builders, and edit operations."""
+    return describe_calculator_workspace()
 
 
 def write_structure_workflow(
@@ -215,6 +249,48 @@ def single_point_workflow(
     }
 
 
+def estimate_elastic_workflow(
+    input_filepath: str,
+    input_format: Optional[str] = None,
+    calculator_name: str = DEFAULT_CALCULATOR_NAME,
+    strain_max: float = 0.02,
+) -> Dict:
+    """Estimate isotropic bulk modulus from a 5-point energy-vs-strain fit."""
+    structure = read_structure(input_filepath, input_format)
+    species = sorted(set(structure.get_chemical_symbols()))
+    calculator, calculator_used, calculator_errors = resolve_calculator(
+        calculator_name,
+        species=species,
+    )
+    strains = [-strain_max, -0.5 * strain_max, 0.0, 0.5 * strain_max, strain_max]
+    samples = []
+    for strain in strains:
+        atoms = structure.copy()
+        atoms.set_cell(structure.cell * (1.0 + strain), scale_atoms=True)
+        atoms.calc = calculator
+        energy = float(atoms.get_potential_energy())
+        volume = float(atoms.get_volume())
+        samples.append({"strain": strain, "energy_eV": energy, "volume_A3": volume})
+
+    s_values = np.array([row["strain"] for row in samples], dtype=float)
+    energies = np.array([row["energy_eV"] for row in samples], dtype=float)
+    volume0 = next(row["volume_A3"] for row in samples if row["strain"] == 0.0)
+    quadratic = np.polyfit(s_values, energies, 2)
+    curvature = float(quadratic[0])
+    bulk_modulus_eV_A3 = 2.0 * curvature / (9.0 * volume0)
+    bulk_modulus_GPa = float(bulk_modulus_eV_A3 / units.GPa)
+    return {
+        "input_filepath": str(Path(input_filepath).absolute()),
+        "samples": samples,
+        "bulk_modulus_GPa": bulk_modulus_GPa,
+        "volume_A3": volume0,
+        "calculator_requested": calculator_name,
+        "calculator_used": calculator_used,
+        "calculator_fallbacks": calculator_errors,
+        "method": "isotropic E(strain) quadratic fit",
+    }
+
+
 def run_md_workflow(
     input_filepath: str,
     input_format: Optional[str] = None,
@@ -254,6 +330,54 @@ def run_md_workflow(
         taup=taup,
         compressibility_au=compressibility_au,
     )
+
+
+def relax_and_md_workflow(
+    input_filepath: str,
+    input_format: Optional[str] = None,
+    optimized_filepath: str = "relaxed.extxyz",
+    output_trajectory_filepath: str = "md.extxyz",
+    log_filepath: str = "md.log",
+    summary_filepath: str = "md_summary.txt",
+    calculator_name: str = DEFAULT_CALCULATOR_NAME,
+    max_steps: int = 50,
+    fmax: float = 0.1,
+    integrator: str = "npt",
+    timestep_fs: float = 1.0,
+    temperature_K: float = 300.0,
+    steps: int = 100,
+    trajectory_interval: int = 1,
+    pressure_GPa: float = 0.0,
+) -> Dict:
+    """Relax a structure then run a short MD trajectory."""
+    optimized = optimize_structure_workflow(
+        input_filepath=input_filepath,
+        input_format=input_format,
+        output_filepath=optimized_filepath,
+        calculator_name=calculator_name,
+        max_steps=max_steps,
+        fmax=fmax,
+    )
+    md = run_md_workflow(
+        input_filepath=optimized["output_filepath"],
+        output_trajectory_filepath=output_trajectory_filepath,
+        log_filepath=log_filepath,
+        summary_filepath=summary_filepath,
+        calculator_name=calculator_name,
+        integrator=integrator,
+        timestep_fs=timestep_fs,
+        temperature_K=temperature_K,
+        steps=steps,
+        trajectory_interval=trajectory_interval,
+        pressure_GPa=pressure_GPa,
+    )
+    return {
+        "status": "success",
+        "optimize": optimized,
+        "md": md,
+        "calculator_requested": calculator_name,
+        "calculator_used": md.get("calculator_used", optimized.get("calculator_used")),
+    }
 
 
 def analyze_trajectory_workflow(
