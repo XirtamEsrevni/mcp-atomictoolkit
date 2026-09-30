@@ -1,4 +1,4 @@
-# ⚛️ MCP Atomic Toolkit
+# ⚠️ MCP Atomic Toolkit
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
@@ -11,8 +11,10 @@
 A FastMCP server for **atomistic modeling workflows** powered by ASE, pymatgen, and modern ML interatomic potentials.
 
 It gives MCP clients a practical toolkit for:
-- building structures,
-- running geometry optimization + molecular dynamics,
+- building and importing structures,
+- editing cells (strain, supercell) and defects (vacancy, substitution, interstitial),
+- running geometry optimization + NVE/NVT/NPT molecular dynamics,
+- estimating bulk modulus,
 - analyzing structures/trajectories,
 - and downloading generated artifacts (data + plots).
 
@@ -33,12 +35,14 @@ If you need atomistic workflows exposed as MCP tools (instead of hand-wiring scr
 
 - **MCP-native workflows** via FastMCP tools
 - **Structure generation**: bulk, surface, molecule, supercell, amorphous, liquid, bicrystal, polycrystal
-- **Optimization workflows** with MLIPs (`kim` default, `nequix`/`orb` supported)
-- **Molecular dynamics** workflows (Velocity Verlet, Langevin, NVT Berendsen)
-- **Analysis outputs**:
-  - RDF + coordination stats
-  - MSD + thermodynamic trends
-  - VACF + diffusion (Green-Kubo)
+- **Structure import** from xyz/cif/POSCAR text
+- **Edits and defects**: rotate, translate, strain, supercell, wrap, vacancy, substitute, interstitial
+- **Calculators**: `auto` tries `kim` → `orb` → `nequix` → ASE **EMT** (Al/Cu/Ag/Au/Ni/Pd/Pt)
+- **Optimization** and **single-point** energy/forces/stress
+- **Molecular dynamics**: Velocity Verlet, Langevin, NVT Berendsen, **NPT Berendsen**
+- **Recipe tool** `relax_and_md_workflow` (relax then MD)
+- **Isotropic bulk modulus** from a 5-point energy-vs-strain fit
+- **Analysis outputs**: RDF + coordination, MSD + thermo trends, VACF + diffusion
 - **Downloadable artifacts** (`xyz`, `extxyz`, `cif`, `traj`, `png`, `svg`, `csv`, `dat`, ...)
 - **Registry-friendly endpoints** (`/healthz`, server card, Streamable HTTP root)
 
@@ -77,7 +81,7 @@ pip install -e ".[kim]"
 
 macOS (Homebrew): `brew install openkim-models kim-api` then `pip install -e ".[kim]"`.
 
-Without the extra, use `calculator_name='auto'`, `'orb'`, or `'nequix'`. Runtime code already falls back when KIM is missing.
+Without the extra, use `calculator_name='auto'`, `'emt'`, `'orb'`, or `'nequix'`. Runtime code already falls back when KIM is missing. EMT covers Al, Cu, Ag, Au, Ni, Pd, and Pt.
 
 ### 3) Run locally
 
@@ -119,16 +123,23 @@ Expected response:
 
 Main MCP tools exposed by the server:
 
+- `list_workspace_capabilities_workflow`
 - `build_structure_workflow`
+- `import_structure_workflow`
+- `manipulate_structure_workflow`
 - `analyze_structure_workflow`
 - `write_structure_workflow`
 - `optimize_structure_workflow`
 - `single_point_workflow`
+- `estimate_elastic_workflow`
 - `run_md_workflow`
+- `relax_and_md_workflow`
 - `analyze_trajectory_workflow`
 - `autocorrelation_workflow`
 
-Legacy aliases are also included for backward compatibility.
+Legacy aliases are also registered: `build_structure`, `read_structure_file`, `write_structure_file`, `optimize_with_mlip`.
+
+Call `list_workspace_capabilities_workflow` first from an agent. It reports which calculators imported, EMT element support, integrators, structure types, and edit operations.
 
 ---
 
@@ -195,23 +206,16 @@ src/mcp_atomictoolkit/
 - **amorphous/liquid** (random packed structures)
 - **bicrystal** and **polycrystal** (grain stacking/rotation)
 
-For **interfaces, doped structures, adsorbates, or custom slabs**, prefer:
+Paste an existing geometry with `import_structure_workflow` (`xyz`, `cif`, or `poscar` text).
 
-1. Generate the structure with ASE/pymatgen (or an external builder), then
-2. Use `write_structure_workflow` to persist the final geometry for downstream steps.
+### Edits and defects
 
-This ensures MCP callers can still handle advanced structures even when a specialized
-builder is required.
+`manipulate_structure_workflow` operations:
 
-### Builder kwargs cheat sheet
-
-Common `builder_kwargs` for `build_structure_workflow`:
-
-- **surface**: `indices`, `layers`, `vacuum`
-- **supercell**: `size`, `base_structure_type`, `base_crystal_system`, `base_lattice_constant`, `base_kwargs`
-- **amorphous/liquid**: `num_atoms`, `box_length`, `relax`, `relax_steps`, `relax_fmax`
-- **bicrystal**: `grain_size`, `interface_axis`, `rotation_angle`, `rotation_axis`, `interface_gap`
-- **polycrystal**: `num_grains`, `grain_size`, `rotation_angle`
+- `rotate`, `translate`, `strain`, `supercell`, `wrap`
+- `vacancy` (`operation_kwargs.index`)
+- `substitute` (`index`, `symbol`)
+- `interstitial` (`symbol`, optional `position`)
 
 ### Optimization options
 
@@ -221,10 +225,11 @@ Common `builder_kwargs` for `build_structure_workflow`:
 - `maxstep`, `alpha` (BFGS step/damping controls)
 - `constraints` (`fixed_atoms`, `fixed_bonds`, `fixed_cell`)
 
-### Single-point calculations
+### Single-point and elasticity
 
-`single_point_workflow` computes **energy**, **forces**, and **stress** (if periodic)
-without modifying the structure, making it suitable for quick evaluations.
+`single_point_workflow` computes **energy**, **forces**, and **stress** (if periodic).
+
+`estimate_elastic_workflow` fits E(strain) at five isotropic strains and returns `bulk_modulus_GPa` plus `calculator_used`.
 
 ### MD integrators / ensembles
 
@@ -233,8 +238,11 @@ without modifying the structure, making it suitable for quick evaluations.
 - `velocityverlet` / `nve` (NVE)
 - `langevin` / `nvt-langevin` (NVT)
 - `nvt` / `nvt-berendsen` (NVT)
+- `npt` / `npt-berendsen` (NPT; `pressure_GPa`, `taup`)
 
-Tune `temperature_K`, `friction`, and `taut` to control thermostat behavior.
+`relax_and_md_workflow` chains optimization then MD.
+
+Every energy/MD result includes `calculator_requested`, `calculator_used`, and `calculator_fallbacks` so an EMT copper run is not mistaken for an MLIP result.
 
 ---
 
@@ -252,6 +260,7 @@ Tune `temperature_K`, `friction`, and `taut` to control thermostat behavior.
 - When adding tools, usually update both:
   - `workflows/core.py`
   - `mcp_server.py`
+  - `http_app.py` `TOOL_NAMES`
 - Preserve `http_app.py` compatibility behavior unless intentionally changing deployment contracts.
 
 ---
