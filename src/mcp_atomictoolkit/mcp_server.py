@@ -20,6 +20,7 @@ from fastmcp.server.tasks import TaskConfig
 
 from mcp_atomictoolkit.artifact_store import with_downloadable_artifacts
 from mcp_atomictoolkit.calculators import DEFAULT_CALCULATOR_NAME
+from mcp_atomictoolkit.deploy_profile import constrain_tool_call, current_profile
 from mcp_atomictoolkit.task_support import apply_task_support_patches
 from mcp_atomictoolkit.workflows.core import (
     analyze_structure_workflow as analyze_structure_workflow_impl,
@@ -178,8 +179,9 @@ def _collect_resource_snapshot() -> Dict[str, Any]:
 
 def _run_tool(tool_name: str, impl: Callable[..., Dict], **kwargs: Any) -> Dict:
     start = perf_counter()
+    kwargs = constrain_tool_call(tool_name, kwargs)
     compact_args = _compact_kwargs(kwargs)
-    logger.info("Tool %s called with args=%s", tool_name, compact_args)
+    logger.info("Tool %s called with args=%s profile=%s", tool_name, compact_args, current_profile().name)
     try:
         result = impl(**kwargs)
     except Exception as exc:
