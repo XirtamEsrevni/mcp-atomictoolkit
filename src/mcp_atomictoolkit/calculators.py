@@ -228,10 +228,18 @@ def resolve_calculator(
     species: Sequence[str] | None = None,
 ) -> tuple["ORBCalculator | NequixCalculator | KIMCalculator | EMTCalculator", str, list[str]]:
     """Resolve a calculator, optionally falling back when auto-selection is used."""
+    from mcp_atomictoolkit.deploy_profile import allowed_calculators, constrain_calculator_name
+
+    calculator_name = constrain_calculator_name(calculator_name)
     calculator_key = _normalize_calculator_name(calculator_name)
+    permitted = set(allowed_calculators())
     if calculator_key == "auto":
-        candidates = AUTO_CANDIDATES
+        candidates = tuple(key for key in AUTO_CANDIDATES if key in permitted)
     else:
+        if calculator_key not in permitted and calculator_key != "auto":
+            raise ValueError(
+                f"Calculator '{calculator_key}' is not allowed on this host memory profile."
+            )
         candidates = (calculator_key,)
 
     errors: list[str] = []
@@ -317,6 +325,9 @@ def describe_calculator_workspace() -> dict:
         if key == "emt":
             payload["supported_elements"] = sorted(EMT_SUPPORTED_ELEMENTS)
         calculators[key] = payload
+    from mcp_atomictoolkit.deploy_profile import current_profile
+
+    profile = current_profile()
     return {
         "default_calculator": DEFAULT_CALCULATOR_NAME,
         "auto_order": list(AUTO_CANDIDATES),
@@ -324,4 +335,5 @@ def describe_calculator_workspace() -> dict:
         "integrators": list(INTEGRATORS),
         "structure_types": list(STRUCTURE_TYPES),
         "manipulate_operations": list(MANIPULATE_OPERATIONS),
+        "memory_profile": profile.public_dict(),
     }
