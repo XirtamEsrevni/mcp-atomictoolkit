@@ -2,12 +2,14 @@ services:
   - type: web
     name: mcp-atomictoolkit
     env: docker
-    plan: starter
+    plan: free
     dockerfilePath: ./Dockerfile
     healthCheckPath: /healthz
     envVars:
       - key: PYTHON_VERSION
         value: "3.12"
+      - key: MEMORY_PROFILE
+        value: "render"
       - key: JAX_PLATFORMS
         value: "cpu"
       - key: JAX_PLATFORM_NAME
