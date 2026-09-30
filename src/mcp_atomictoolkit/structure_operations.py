@@ -272,15 +272,24 @@ def manipulate_structure(atoms: Atoms, operation: str, **kwargs) -> Atoms:
 
 def get_structure_info(atoms: Atoms) -> Dict:
     """Get detailed information about structure."""
-    lattice = atoms.cell.array
     species = atoms.get_chemical_symbols()
-    coords = atoms.get_scaled_positions()
+    volume = None
+    cell = atoms.cell.array.tolist() if atoms.cell is not None else None
+    cell_lengths = None
+    cell_angles = None
+    try:
+        volume = float(atoms.get_volume())
+        cell_lengths = atoms.cell.lengths().tolist()
+        cell_angles = atoms.cell.angles().tolist()
+    except ValueError:
+        volume = None
 
     spacegroup = None
     crystal_system = None
     point_group = None
-    if all(atoms.pbc):
-        structure = Structure(lattice, species, coords)
+    if volume and all(atoms.pbc):
+        coords = atoms.get_scaled_positions()
+        structure = Structure(atoms.cell.array, species, coords)
         analyzer = SpacegroupAnalyzer(structure)
         spacegroup = analyzer.get_space_group_symbol()
         crystal_system = analyzer.get_crystal_system()
@@ -289,10 +298,10 @@ def get_structure_info(atoms: Atoms) -> Dict:
     return {
         "formula": atoms.get_chemical_formula(),
         "num_atoms": len(atoms),
-        "volume": atoms.get_volume(),
-        "cell": atoms.cell.array.tolist(),
-        "cell_lengths": atoms.cell.lengths().tolist(),
-        "cell_angles": atoms.cell.angles().tolist(),
+        "volume": volume,
+        "cell": cell,
+        "cell_lengths": cell_lengths,
+        "cell_angles": cell_angles,
         "pbc": atoms.pbc.tolist(),
         "spacegroup": spacegroup,
         "crystal_system": crystal_system,
