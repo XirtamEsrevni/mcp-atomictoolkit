@@ -3,12 +3,15 @@ name: Wake MCP host
 # Pings HEALTHCHECK_URL so a free sleeper (Render, blitz.cloud, …) comes back
 # up and stays up. Scheduled jobs only run from the default branch.
 #
-# Repo secret:
+# Repo variable (Settings → Secrets and variables → Actions → Variables):
 #   HEALTHCHECK_URL = https://YOUR-SERVICE.onrender.com/healthz
-# Optional repo variable:
+# Optional:
 #   KEEPALIVE_MODE  = wake | keep  (default wake)
-#     wake = one long retry loop (cold start)
+#     wake = long retry loop for cold start
 #     keep = short ping so 15-minute idle sleep never trips
+#
+# The URL is not a secret. GitHub blanks secrets inside `if:`, which would
+# skip this job forever.
 
 on:
   workflow_dispatch:
@@ -23,21 +26,17 @@ concurrency:
 
 jobs:
   ping:
-    if: ${{ vars.HEALTHCHECK_URL != '' || secrets.HEALTHCHECK_URL != '' }}
+    if: ${{ vars.HEALTHCHECK_URL != '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Wake or keep the public MCP
         env:
-          HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}
+          HEALTHCHECK_URL: ${{ vars.HEALTHCHECK_URL }}
           KEEPALIVE_MODE: ${{ vars.KEEPALIVE_MODE || 'wake' }}
         run: |
           set -euo pipefail
-          URL="${HEALTHCHECK_URL:-}"
-          if [ -z "$URL" ]; then
-            echo "Set repo secret HEALTHCHECK_URL to the /healthz endpoint."
-            exit 0
-          fi
+          URL="${HEALTHCHECK_URL}"
           MODE="${KEEPALIVE_MODE:-wake}"
           echo "target=$URL mode=$MODE"
 
@@ -52,8 +51,6 @@ jobs:
             exit 0
           fi
 
-          # Cold start can take 30–90s on free web. Retry instead of failing
-          # the first empty response.
           deadline=$((SECONDS + 180))
           code=""
           while [ "$SECONDS" -lt "$deadline" ]; do
