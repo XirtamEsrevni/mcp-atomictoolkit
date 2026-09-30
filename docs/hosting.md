@@ -69,3 +69,21 @@ On the lite image, `calculator_name='auto'` falls through to EMT for Al/Cu/Ag/Au
 ## Oracle Always Free ARM
 
 Works if you will put a card on file for identity checks. 2 OCPU / 12 GB in 2026. Not needed if Render + the wake workflow is enough.
+
+
+## Render memory profile
+
+Render free web is about 512 MB. The server detects that host automatically (`RENDER=true`) and also honors `MEMORY_PROFILE=render`.
+
+On that profile the MCP process will:
+
+- force calculators to EMT (`auto` never tries Orb/Nequix/KIM)
+- cap MD at 40 steps and relaxations at 25 steps
+- reject amorphous/liquid/polycrystal/bicrystal builders
+- reject trajectory analysis and VACF
+- reject supercells whose repeat product is greater than 8
+- refuse more than 32 atoms written from coordinates
+
+`GET /healthz` includes `memory_profile`, so the wake workflow still sees `200` without running a job. `list_workspace_capabilities_workflow` includes the same limits.
+
+Set `MEMORY_PROFILE=full` only on a box with real RAM.
