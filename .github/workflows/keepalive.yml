@@ -1,0 +1,69 @@
+name: Wake MCP host
+
+# Pings HEALTHCHECK_URL so a free sleeper (Render, blitz.cloud, …) comes back
+# up and stays up. Scheduled jobs only run from the default branch.
+#
+# Repo secret:
+#   HEALTHCHECK_URL = https://YOUR-SERVICE.onrender.com/healthz
+# Optional repo variable:
+#   KEEPALIVE_MODE  = wake | keep  (default wake)
+#     wake = one long retry loop (cold start)
+#     keep = short ping so 15-minute idle sleep never trips
+
+on:
+  workflow_dispatch:
+  schedule:
+    # GitHub can delay cron by several minutes. */10 is the practical floor
+    # for Render's 15-minute idle window.
+    - cron: "*/10 * * * *"
+
+concurrency:
+  group: wake-mcp-host
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    if: ${{ vars.HEALTHCHECK_URL != '' || secrets.HEALTHCHECK_URL != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Wake or keep the public MCP
+        env:
+          HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}
+          KEEPALIVE_MODE: ${{ vars.KEEPALIVE_MODE || 'wake' }}
+        run: |
+          set -euo pipefail
+          URL="${HEALTHCHECK_URL:-}"
+          if [ -z "$URL" ]; then
+            echo "Set repo secret HEALTHCHECK_URL to the /healthz endpoint."
+            exit 0
+          fi
+          MODE="${KEEPALIVE_MODE:-wake}"
+          echo "target=$URL mode=$MODE"
+
+          attempt() {
+            curl -fsS --max-time 25 -o /tmp/healthz.body -w "%{http_code}" "$URL" || true
+          }
+
+          if [ "$MODE" = "keep" ]; then
+            code="$(attempt)"
+            echo "http=$code"
+            test "$code" = "200"
+            exit 0
+          fi
+
+          # Cold start can take 30–90s on free web. Retry instead of failing
+          # the first empty response.
+          deadline=$((SECONDS + 180))
+          code=""
+          while [ "$SECONDS" -lt "$deadline" ]; do
+            code="$(attempt)"
+            echo "http=$code"
+            if [ "$code" = "200" ]; then
+              cat /tmp/healthz.body || true
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "host did not become healthy in 180s (last=$code)"
+          exit 1
