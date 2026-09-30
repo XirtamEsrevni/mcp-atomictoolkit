@@ -28,7 +28,12 @@ mlip = [
     "pynanoflann>=0.10.0",
 ]
 full = [
-    "mcp-atomictoolkit[kim,mlip]",
+    "kim-query>=0.2.0",
+    "kimpy>=1.1.0",
+    "dm-tree>=0.1.6",
+    "nequix>=0.1.0",
+    "orb-models>=0.4.2",
+    "pynanoflann>=0.10.0",
 ]
 test = [
     "hypothesis>=6.112.0",
