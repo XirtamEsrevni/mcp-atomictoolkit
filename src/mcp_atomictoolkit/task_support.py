@@ -389,7 +389,7 @@ async def _store_task_metadata(
         if ttl_ms is not None:
             await redis.hset(
                 docket.key(_task_meta_key(session_id, task_id)),
-                mapping={"ttl_ms": ttl_ms},
+                mapping={"ttl_ms": str(ttl_ms)},
             )
             if ttl_seconds:
                 await redis.expire(

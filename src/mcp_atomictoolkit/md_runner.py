@@ -9,6 +9,7 @@ from typing import Dict, Optional
 from ase import Atoms, units
 from ase.io import Trajectory, write
 from ase.md.langevin import Langevin
+from ase.md.nptberendsen import NPTBerendsen
 from ase.md.nvtberendsen import NVTBerendsen
 from ase.md.velocitydistribution import (
     MaxwellBoltzmannDistribution,
@@ -93,6 +94,9 @@ def _select_integrator(
     temperature_K: float,
     friction: float,
     taut: float,
+    pressure_GPa: float = 0.0,
+    taup: float = 1000.0,
+    compressibility_au: Optional[float] = None,
 ):
     """Return an ASE MD integrator."""
     integrator_lower = integrator.lower()
@@ -103,9 +107,21 @@ def _select_integrator(
         return Langevin(atoms, dt, temperature_K=temperature_K, friction=friction)
     if integrator_lower in {"nvt", "nvt-berendsen"}:
         return NVTBerendsen(atoms, dt, temperature_K=temperature_K, taut=taut)
+    if integrator_lower in {"npt", "npt-berendsen"}:
+        npt_kwargs = {
+            "temperature_K": temperature_K,
+            "taut": taut,
+            "pressure_au": pressure_GPa * units.GPa,
+            "taup": taup,
+        }
+        if compressibility_au is not None:
+            npt_kwargs["compressibility_au"] = compressibility_au
+        else:
+            npt_kwargs["compressibility_au"] = 4.57e-5 / units.bar
+        return NPTBerendsen(atoms, dt, **npt_kwargs)
 
     raise ValueError(
-        "Unknown integrator. Use 'velocityverlet', 'langevin', or 'nvt'."
+        "Unknown integrator. Use 'velocityverlet', 'langevin', 'nvt', or 'npt'."
     )
 
 
@@ -124,6 +140,9 @@ def run_md(
     friction: float = 0.02,
     taut: float = 100.0,
     trajectory_interval: int = 1,
+    pressure_GPa: float = 0.0,
+    taup: float = 1000.0,
+    compressibility_au: Optional[float] = None,
 ) -> Dict:
     """Run an ASE molecular dynamics simulation.
 
@@ -134,14 +153,17 @@ def run_md(
         output_format: Trajectory format (optional, inferred from path).
         log_filepath: Path to log file for MD energies/temperature.
         summary_filepath: Path to summary file for MD statistics.
-        calculator_name: Type of MLIP ('auto', 'kim', 'nequix', or 'orb'). Defaults to auto.
-        integrator: Integrator ('velocityverlet', 'langevin', 'nvt').
+        calculator_name: Type of MLIP ('auto', 'kim', 'nequix', 'orb', or 'emt').
+        integrator: Integrator ('velocityverlet', 'langevin', 'nvt', 'npt').
         timestep_fs: MD timestep in femtoseconds.
         temperature_K: Target temperature in Kelvin.
         steps: Number of MD steps.
         friction: Langevin friction coefficient (1/fs).
-        taut: NVT Berendsen thermostat time constant (fs).
+        taut: NVT/NPT Berendsen thermostat time constant (ASE time units).
         trajectory_interval: Interval between trajectory writes.
+        pressure_GPa: External pressure for NPT Berendsen (GPa).
+        taup: NPT Berendsen barostat time constant (ASE time units).
+        compressibility_au: Optional NPT compressibility in ASE units.
 
     Returns:
         Dict containing output file paths and summary statistics.
@@ -163,6 +185,9 @@ def run_md(
         temperature_K=temperature_K,
         friction=friction,
         taut=taut,
+        pressure_GPa=pressure_GPa,
+        taup=taup,
+        compressibility_au=compressibility_au,
     )
 
     trajectory_path = Path(output_trajectory_filepath)
