@@ -2,23 +2,15 @@ services:
   - type: web
     name: mcp-atomictoolkit
     env: docker
-    plan: free
+    plan: starter
     dockerfilePath: ./Dockerfile
     healthCheckPath: /healthz
     envVars:
       - key: PYTHON_VERSION
-        value: "3.11"
-      - key: JAX_PLUGINS
-        value: ""
-      - key: JAX_SKIP_JAXLIB_PJRT_CUDA_PLUGIN
-        value: "1"
-      - key: JAX_SKIP_JAXLIB_PJRT_ROCM_PLUGIN
-        value: "1"
+        value: "3.12"
       - key: JAX_PLATFORMS
         value: "cpu"
       - key: JAX_PLATFORM_NAME
         value: "cpu"
       - key: CUDA_VISIBLE_DEVICES
-        value: ""
-      - key: JAX_CUDA_VISIBLE_DEVICES
         value: ""

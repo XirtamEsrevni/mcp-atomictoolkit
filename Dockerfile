@@ -1,42 +1,26 @@
-FROM ubuntu:22.04
+# Default image for free-tier hosts (Hugging Face Spaces, small VMs).
+# EMT + ASE + pymatgen only. No OpenKIM compile, no Orb/Nequix/PyTorch.
+FROM python:3.12-slim-bookworm
 
-ENV DEBIAN_FRONTEND=noninteractive
-ENV TZ=Etc/UTC
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    JAX_PLATFORMS=cpu \
+    JAX_PLATFORM_NAME=cpu \
+    CUDA_VISIBLE_DEVICES=
 
 WORKDIR /app
-COPY . .
+COPY pyproject.toml README.md ./ 
+COPY src ./src
+COPY main.py ./
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        ca-certificates \
-        curl \
-        software-properties-common \
-        build-essential \
-        pkg-config \
-        git \
-        gnupg \
-    && add-apt-repository ppa:deadsnakes/ppa \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends \
-        python3.12 \
-        python3.12-dev \
-        python3.12-venv \
+    && apt-get install -y --no-install-recommends build-essential \
+    && python -m pip install --no-cache-dir --upgrade pip \
+    && python -m pip install --no-cache-dir -e . \
+    && apt-get purge -y build-essential \
+    && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
-
-RUN add-apt-repository ppa:openkim/latest \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends libkim-api-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-ENV LD_LIBRARY_PATH="/usr/lib:/usr/local/lib"
-ENV PKG_CONFIG_PATH="/usr/lib/pkgconfig:/usr/local/lib/pkgconfig"
-ENV PIP_INDEX_URL="https://download.pytorch.org/whl/cpu"
-ENV PIP_EXTRA_INDEX_URL="https://pypi.org/simple"
-ENV PIP_PREFER_BINARY=1
-
-RUN python3.12 -m ensurepip --upgrade \
-    && python3.12 -m pip install --no-cache-dir --upgrade pip \
-    && python3.12 -m pip install --no-cache-dir -e ".[kim]"
 
 EXPOSE 7860
 ENV HOST=0.0.0.0
