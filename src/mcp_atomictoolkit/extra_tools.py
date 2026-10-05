@@ -14,6 +14,12 @@ from mcp_atomictoolkit.workflows.recipes import (
     standardize_cell_workflow,
     vacancy_formation_workflow,
 )
+from mcp_atomictoolkit.workflows.job_workflows import (
+    cancel_job,
+    get_job,
+    list_jobs,
+    submit_md_job,
+)
 
 _REGISTERED = False
 
@@ -142,4 +148,58 @@ def register_extra_tools(mcp, run_tool: Callable[..., Dict]) -> None:
         )
 
     add_adsorbate_workflow_tool.__name__ = "add_adsorbate_workflow"
+
+    @mcp.tool(task=TaskConfig(mode="optional"))
+    async def submit_md_job_tool(
+        input_filepath: str,
+        input_format: Optional[str] = None,
+        output_trajectory_filepath: str = "md.extxyz",
+        calculator_name: str = DEFAULT_CALCULATOR_NAME,
+        integrator: str = "nvt",
+        timestep_fs: float = 1.0,
+        temperature_K: float = 300.0,
+        steps: Optional[int] = None,
+        duration_ps: Optional[float] = None,
+        trajectory_interval: int = 10,
+        pressure_GPa: float = 0.0,
+    ) -> Dict:
+        """Start MD in the background. Returns job_id immediately. 100 ps at 1 fs is 100000 steps. Poll get_job."""
+        return run_tool(
+            "submit_md_job",
+            submit_md_job,
+            input_filepath=input_filepath,
+            input_format=input_format,
+            output_trajectory_filepath=output_trajectory_filepath,
+            calculator_name=calculator_name,
+            integrator=integrator,
+            timestep_fs=timestep_fs,
+            temperature_K=temperature_K,
+            steps=steps,
+            duration_ps=duration_ps,
+            trajectory_interval=trajectory_interval,
+            pressure_GPa=pressure_GPa,
+        )
+
+    submit_md_job_tool.__name__ = "submit_md_job"
+
+    @mcp.tool(task=TaskConfig(mode="optional"))
+    async def get_job_tool(job_id: str) -> Dict:
+        """Reconnect to a background job. Works from a new MCP session while the server process is alive."""
+        return run_tool("get_job", get_job, job_id=job_id)
+
+    get_job_tool.__name__ = "get_job"
+
+    @mcp.tool(task=TaskConfig(mode="optional"))
+    async def list_jobs_tool(limit: int = 20) -> Dict:
+        """List background jobs on this server process."""
+        return run_tool("list_jobs", list_jobs, limit=limit)
+
+    list_jobs_tool.__name__ = "list_jobs"
+
+    @mcp.tool(task=TaskConfig(mode="optional"))
+    async def cancel_job_tool(job_id: str) -> Dict:
+        """Ask a background job to stop between MD chunks."""
+        return run_tool("cancel_job", cancel_job, job_id=job_id)
+
+    cancel_job_tool.__name__ = "cancel_job"
     _REGISTERED = True
