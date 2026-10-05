@@ -1,0 +1,15 @@
+{
+  "name": "io.github.XirtamEsrevni/mcp-atomictoolkit",
+  "description": "Atomistic MCP for ASE and pymatgen: build, relax, defects, EOS, and reconnectable molecular dynamics.",
+  "version": "0.2.0",
+  "repository": {
+    "url": "https://github.com/XirtamEsrevni/mcp-atomictoolkit",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp-atomictoolkit-zlf0.onrender.com/"
+    }
+  ]
+}
