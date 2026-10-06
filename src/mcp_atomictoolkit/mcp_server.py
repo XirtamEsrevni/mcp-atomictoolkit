@@ -617,5 +617,10 @@ async def create_download_artifact(filepath: str) -> Dict:
     return _run_tool("create_download_artifact", lambda filepath: {"filepath": filepath}, filepath=filepath)
 
 
+from mcp_atomictoolkit.extra_tools import register_extra_tools
+
+register_extra_tools(mcp, _run_tool)
+
+
 if __name__ == "__main__":
     mcp.run()
