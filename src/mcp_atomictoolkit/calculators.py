@@ -223,6 +223,23 @@ def _get_calculator_by_key(
     raise ValueError(f"Unknown MLIP type: {calculator_key}")
 
 
+def _render_limited() -> bool:
+    explicit = os.environ.get("MEMORY_PROFILE", "").strip().lower()
+    if explicit in {"full", "off", "disabled"}:
+        return False
+    if explicit in {"render", "lite", "free", "low"}:
+        return True
+    return os.environ.get("RENDER", "").strip().lower() in {"1", "true", "yes", "on"} or bool(
+        os.environ.get("RENDER_SERVICE_ID")
+    )
+
+
+def _auto_candidates() -> tuple[str, ...]:
+    if _render_limited():
+        return ("emt",)
+    return AUTO_CANDIDATES
+
+
 def resolve_calculator(
     calculator_name: str,
     species: Sequence[str] | None = None,
@@ -235,7 +252,7 @@ def resolve_calculator(
     if discovered is not None:
         return discovered
     if calculator_key == "auto":
-        candidates = AUTO_CANDIDATES
+        candidates = _auto_candidates()
     else:
         candidates = (calculator_key,)
 
@@ -255,23 +272,6 @@ def resolve_calculator(
             )
             continue
         return calculator, candidate, errors
-
-    if calculator_key != "auto":
-        fallback_candidates = [c for c in AUTO_CANDIDATES if c != calculator_key]
-        for candidate in fallback_candidates:
-            attempted.append(candidate)
-            try:
-                calculator = _get_calculator_by_key(candidate, species)
-            except Exception as exc:
-                errors.append(f"{candidate}: {exc}")
-                logger.warning(
-                    "Calculator '%s' unavailable: %s",
-                    candidate,
-                    exc,
-                    exc_info=True,
-                )
-                continue
-            return calculator, candidate, errors
 
     attempted_summary = ", ".join(attempted)
     detail = "; ".join(errors) or "no additional error details"
@@ -344,7 +344,12 @@ def describe_calculator_workspace() -> dict:
         calculators[key] = payload
     return {
         "default_calculator": DEFAULT_CALCULATOR_NAME,
-        "auto_order": list(AUTO_CANDIDATES),
+        "auto_order": list(_auto_candidates()),
+        "host": {
+            "memory_profile": "render" if _render_limited() else "full",
+            "disk": "ephemeral" if _render_limited() else "persistent",
+            "note": "On Render, files under /app disappear when the process restarts. Use download_url in the same session.",
+        },
         "calculators": calculators,
         "integrators": list(INTEGRATORS),
         "structure_types": list(STRUCTURE_TYPES),

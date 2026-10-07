@@ -339,7 +339,7 @@ async def write_structure_workflow(
     )
 
 
-@mcp.tool(task=TaskConfig(mode="required"))
+@mcp.tool(task=TaskConfig(mode="optional"))
 async def optimize_structure_workflow(
     input_filepath: str,
     input_format: Optional[str] = None,
@@ -403,7 +403,7 @@ async def estimate_elastic_workflow(
     )
 
 
-@mcp.tool(task=TaskConfig(mode="required"))
+@mcp.tool(task=TaskConfig(mode="optional"))
 async def run_md_workflow(
     input_filepath: str,
     input_format: Optional[str] = None,
@@ -447,7 +447,7 @@ async def run_md_workflow(
     )
 
 
-@mcp.tool(task=TaskConfig(mode="required"))
+@mcp.tool(task=TaskConfig(mode="optional"))
 async def relax_and_md_workflow(
     input_filepath: str,
     input_format: Optional[str] = None,
@@ -487,7 +487,7 @@ async def relax_and_md_workflow(
     )
 
 
-@mcp.tool(task=TaskConfig(mode="required"))
+@mcp.tool(task=TaskConfig(mode="optional"))
 async def analyze_trajectory_workflow(
     filepath: str,
     format: Optional[str] = None,
@@ -513,7 +513,7 @@ async def analyze_trajectory_workflow(
     )
 
 
-@mcp.tool(task=TaskConfig(mode="required"))
+@mcp.tool(task=TaskConfig(mode="optional"))
 async def autocorrelation_workflow(
     filepath: str,
     format: Optional[str] = None,
