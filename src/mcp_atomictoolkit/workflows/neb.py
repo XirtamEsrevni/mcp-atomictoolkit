@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+
+import numpy as np
 from pathlib import Path
 from typing import Dict, Optional
 from uuid import uuid4
@@ -75,24 +77,48 @@ def submit_neb_job(
         images = [initial]
         images += [initial.copy() for _ in range(n_images)]
         images.append(final)
-        neb = NEB(images, method='improvedtangent', allow_shared_calculator=True)
-        neb.interpolate()
+        neb = NEB(images, method="improvedtangent", allow_shared_calculator=True)
+        neb.interpolate(mic=True)
         for image in images:
             image.calc = calculator
         progress({"completed": 0, "total": max_steps, "message": "interpolated"})
-        if should_stop():
-            return {"status": "cancelled"}
         opt = FIRE(neb, logfile=str(root / "neb.log"))
-        opt.run(fmax=fmax, steps=max_steps)
+        completed = 0
+        while completed < max_steps:
+            if should_stop():
+                energies = [float(image.get_potential_energy()) for image in images]
+                return {
+                    "status": "cancelled",
+                    "converged": False,
+                    "steps": completed,
+                    "energies_eV": energies,
+                    "barrier_eV": max(energies) - energies[0],
+                }
+            opt.run(fmax=fmax, steps=1)
+            completed += 1
+            forces = np.asarray(neb.get_forces())
+            fmax_now = float(np.sqrt((forces ** 2).sum(axis=1)).max())
+            progress({"completed": completed, "total": max_steps, "message": f"{completed}/{max_steps} fmax={fmax_now:.4f}"})
+            if fmax_now <= fmax:
+                break
+        forces = np.asarray(neb.get_forces())
+        fmax_final = float(np.sqrt((forces ** 2).sum(axis=1)).max())
+        converged = fmax_final <= fmax
         energies = [float(image.get_potential_energy()) for image in images]
         barrier = max(energies) - energies[0]
         traj = root / "neb.traj"
         write(traj, images)
-        progress({"completed": max_steps, "total": max_steps, "message": "finished"})
+        message = "converged" if converged else "stopped at max_steps without meeting fmax"
+        progress({"completed": completed, "total": max_steps, "message": message})
         return {
             "barrier_eV": barrier,
             "energies_eV": energies,
             "n_images": n_images,
+            "converged": converged,
+            "steps": completed,
+            "fmax": fmax,
+            "fmax_final": fmax_final,
+            "max_steps": max_steps,
             "trajectory_filepath": str(traj.absolute()),
             "calculator_requested": calculator_name,
             "calculator_used": calculator_used,
