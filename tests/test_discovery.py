@@ -36,3 +36,23 @@ def test_resolve_calls_load_calculator(monkeypatch):
     assert calculator is sentinel
     assert used == "mace_mp_0"
     assert errors == []
+
+
+def test_released_registry_uses_calculators_mapping(monkeypatch):
+    monkeypatch.delenv("RENDER", raising=False)
+    monkeypatch.setenv("MEMORY_PROFILE", "full")
+    sentinel = object()
+
+    class _Registry:
+        CALCULATORS = {"mace_mp_0": lambda: sentinel}
+
+    import sys, types
+    module = types.ModuleType("matbench_discovery.calculators")
+    module.CALCULATORS = _Registry.CALCULATORS
+    monkeypatch.setitem(sys.modules, "matbench_discovery", types.ModuleType("matbench_discovery"))
+    monkeypatch.setitem(sys.modules, "matbench_discovery.calculators", module)
+    from mcp_atomictoolkit.discovery_calculators import maybe_load_discovery
+    calculator, used, errors = maybe_load_discovery("mace_mp_0")
+    assert calculator is sentinel
+    assert used == "mace_mp_0"
+    assert errors == []
