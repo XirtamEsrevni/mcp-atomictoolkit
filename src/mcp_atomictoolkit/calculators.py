@@ -20,7 +20,9 @@ EMT_SUPPORTED_ELEMENTS = frozenset({"Al", "Cu", "Ag", "Au", "Ni", "Pd", "Pt"})
 # heavyweight dependencies (e.g., KIM API) are unavailable.
 DEFAULT_CALCULATOR_NAME = "auto"
 MLIP_CANDIDATES = ("kim", "orb", "nequix")
+ANALYTICAL_CANDIDATES = ("emt", "lj", "morse")
 AUTO_CANDIDATES = MLIP_CANDIDATES + ("emt",)
+HEAVY_CANDIDATES = MLIP_CANDIDATES
 INTEGRATORS = (
     "velocityverlet",
     "nve",
@@ -220,7 +222,38 @@ def _get_calculator_by_key(
         return get_kim_calculator(species=species)
     if calculator_key == "emt":
         return get_emt_calculator(species=species)
-    raise ValueError(f"Unknown MLIP type: {calculator_key}")
+    if calculator_key == "lj":
+        return get_lj_calculator()
+    if calculator_key == "morse":
+        return get_morse_calculator()
+    raise ValueError(f"Unknown calculator type: {calculator_key}")
+
+
+def get_lj_calculator():
+    """Lennard-Jones. Ships with ASE and fits the Render memory limit."""
+    from ase.calculators.lj import LennardJones
+
+    return LennardJones()
+
+
+def get_morse_calculator():
+    """Morse pair potential. Ships with ASE and fits the Render memory limit."""
+    from ase.calculators.morse import MorsePotential
+
+    return MorsePotential()
+
+
+def _render_limited() -> bool:
+    return _host_blocks_heavy_calculators()
+
+
+def _auto_candidates(species: Sequence[str] | None) -> tuple[str, ...]:
+    if not _render_limited():
+        return AUTO_CANDIDATES
+    normalized = set(_normalize_species(species))
+    if not normalized or normalized <= EMT_SUPPORTED_ELEMENTS:
+        return ("emt",)
+    return ("lj",)
 
 
 def resolve_calculator(
@@ -234,8 +267,13 @@ def resolve_calculator(
     discovered = maybe_load_discovery(calculator_key)
     if discovered is not None:
         return discovered
+    if _render_limited() and calculator_key in HEAVY_CANDIDATES:
+        raise ValueError(
+            f"Calculator '{calculator_key}' is not available on the 512 MB Render image. "
+            "Use emt, lj, or morse. KIM needs the system library; Orb and Nequix need ML stacks."
+        )
     if calculator_key == "auto":
-        candidates = AUTO_CANDIDATES
+        candidates = _auto_candidates(species)
     else:
         candidates = (calculator_key,)
 
@@ -255,23 +293,6 @@ def resolve_calculator(
             )
             continue
         return calculator, candidate, errors
-
-    if calculator_key != "auto":
-        fallback_candidates = [c for c in AUTO_CANDIDATES if c != calculator_key]
-        for candidate in fallback_candidates:
-            attempted.append(candidate)
-            try:
-                calculator = _get_calculator_by_key(candidate, species)
-            except Exception as exc:
-                errors.append(f"{candidate}: {exc}")
-                logger.warning(
-                    "Calculator '%s' unavailable: %s",
-                    candidate,
-                    exc,
-                    exc_info=True,
-                )
-                continue
-            return calculator, candidate, errors
 
     attempted_summary = ", ".join(attempted)
     detail = "; ".join(errors) or "no additional error details"
@@ -308,18 +329,24 @@ def _probe_import(calculator_key: str) -> tuple[bool, str | None]:
         if calculator_key == "emt":
             from ase.calculators.emt import EMT  # noqa: F401
             EMT()
+        elif calculator_key == "lj":
+            from ase.calculators.lj import LennardJones  # noqa: F401
+            LennardJones()
+        elif calculator_key == "morse":
+            from ase.calculators.morse import MorsePotential  # noqa: F401
+            MorsePotential()
         elif calculator_key == "kim":
             if _host_blocks_heavy_calculators():
-                return False, "blocked by Render memory profile"
+                return False, "KIM API library is not installed in the Render image"
             from ase.calculators.kim.kim import KIM  # noqa: F401
             return False, "importable only; KIM is not marked available until a model initializes"
         elif calculator_key == "orb":
             if _host_blocks_heavy_calculators():
-                return False, "blocked by Render memory profile"
+                return False, "Orb needs PyTorch and weights; that exceeds the 512 MB Render dyno"
             import orb_models  # noqa: F401
         elif calculator_key == "nequix":
             if _host_blocks_heavy_calculators():
-                return False, "blocked by Render memory profile"
+                return False, "Nequix needs JAX; that exceeds the 512 MB Render dyno"
             import nequix  # noqa: F401
         else:
             return False, f"unknown calculator {calculator_key}"
@@ -333,7 +360,7 @@ def describe_calculator_workspace() -> dict:
     from mcp_atomictoolkit.structure_operations import MANIPULATE_OPERATIONS, STRUCTURE_TYPES
 
     calculators = {}
-    for key in AUTO_CANDIDATES:
+    for key in ANALYTICAL_CANDIDATES + MLIP_CANDIDATES:
         available, error = _probe_import(key)
         payload = {"available": available, "usable": available}
         if error:
@@ -344,7 +371,13 @@ def describe_calculator_workspace() -> dict:
         calculators[key] = payload
     return {
         "default_calculator": DEFAULT_CALCULATOR_NAME,
-        "auto_order": list(AUTO_CANDIDATES),
+        "auto_order": list(_auto_candidates(None)),
+        "render_calculators": list(ANALYTICAL_CANDIDATES),
+        "host": {
+            "memory_limit_mb": 512 if _render_limited() else None,
+            "disk": "ephemeral" if _render_limited() else "persistent",
+            "note": "Render can run ASE analytical potentials. Torch/JAX MLIPs and OpenKIM are not in the 512 MB image.",
+        },
         "calculators": calculators,
         "integrators": list(INTEGRATORS),
         "structure_types": list(STRUCTURE_TYPES),
