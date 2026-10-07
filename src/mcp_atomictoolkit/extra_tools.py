@@ -21,6 +21,7 @@ from mcp_atomictoolkit.workflows.job_workflows import (
     submit_md_job,
 )
 from mcp_atomictoolkit.workflows.surface import surface_energy_workflow
+from mcp_atomictoolkit.workflows.neb import submit_neb_job
 
 _REGISTERED = False
 
@@ -230,4 +231,29 @@ def register_extra_tools(mcp, run_tool: Callable[..., Dict]) -> None:
         )
 
     surface_energy_workflow_tool.__name__ = "surface_energy_workflow"
+
+    @mcp.tool(task=TaskConfig(mode="optional"))
+    async def submit_neb_job_tool(
+        initial_filepath: str,
+        final_filepath: str,
+        n_images: int = 3,
+        calculator_name: str = DEFAULT_CALCULATOR_NAME,
+        fmax: float = 0.1,
+        max_steps: int = 20,
+        input_format: Optional[str] = None,
+    ) -> Dict:
+        """Start an ASE NEB hop in the background. Poll get_job. Disabled on Render."""
+        return run_tool(
+            "submit_neb_job",
+            submit_neb_job,
+            initial_filepath=initial_filepath,
+            final_filepath=final_filepath,
+            n_images=n_images,
+            calculator_name=calculator_name,
+            fmax=fmax,
+            max_steps=max_steps,
+            input_format=input_format,
+        )
+
+    submit_neb_job_tool.__name__ = "submit_neb_job"
     _REGISTERED = True
