@@ -33,7 +33,7 @@ def test_neb_job_returns_a_barrier(tmp_path, monkeypatch):
         str(end),
         n_images=1,
         calculator_name="emt",
-        fmax=0.5,
+        fmax=1e-6,
         max_steps=2,
     )
     job_id = submitted["job_id"]
@@ -44,6 +44,10 @@ def test_neb_job_returns_a_barrier(tmp_path, monkeypatch):
             break
         time.sleep(0.25)
     assert final_record["status"] == "completed", final_record.get("error")
-    assert "barrier_eV" in final_record["result"]
-    assert len(final_record["result"]["energies_eV"]) == 3
-    assert job_id in final_record["result"]["trajectory_filepath"]
+    result = final_record["result"]
+    assert "barrier_eV" in result
+    assert "converged" in result
+    assert "fmax_final" in result
+    assert result["steps"] >= 1
+    assert len(result["energies_eV"]) == 3
+    assert job_id in result["trajectory_filepath"]
