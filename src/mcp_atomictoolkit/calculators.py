@@ -287,15 +287,34 @@ def get_calculator(
     return calculator
 
 
+def _host_blocks_heavy_calculators() -> bool:
+    explicit = os.environ.get("MEMORY_PROFILE", "").strip().lower()
+    if explicit in {"full", "off", "disabled"}:
+        return False
+    if explicit in {"render", "lite", "free", "low"}:
+        return True
+    return os.environ.get("RENDER", "").strip().lower() in {"1", "true", "yes", "on"} or bool(
+        os.environ.get("RENDER_SERVICE_ID")
+    )
+
+
 def _probe_import(calculator_key: str) -> tuple[bool, str | None]:
     try:
         if calculator_key == "emt":
             from ase.calculators.emt import EMT  # noqa: F401
+            EMT()
         elif calculator_key == "kim":
+            if _host_blocks_heavy_calculators():
+                return False, "blocked by Render memory profile"
             from ase.calculators.kim.kim import KIM  # noqa: F401
+            return False, "importable only; KIM is not marked available until a model initializes"
         elif calculator_key == "orb":
+            if _host_blocks_heavy_calculators():
+                return False, "blocked by Render memory profile"
             import orb_models  # noqa: F401
         elif calculator_key == "nequix":
+            if _host_blocks_heavy_calculators():
+                return False, "blocked by Render memory profile"
             import nequix  # noqa: F401
         else:
             return False, f"unknown calculator {calculator_key}"
@@ -311,9 +330,10 @@ def describe_calculator_workspace() -> dict:
     calculators = {}
     for key in AUTO_CANDIDATES:
         available, error = _probe_import(key)
-        payload = {"available": available}
+        payload = {"available": available, "usable": available}
         if error:
             payload["error"] = error
+            payload["usable"] = False
         if key == "emt":
             payload["supported_elements"] = sorted(EMT_SUPPORTED_ELEMENTS)
         calculators[key] = payload
