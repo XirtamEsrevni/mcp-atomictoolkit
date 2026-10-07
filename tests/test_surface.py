@@ -35,3 +35,8 @@ def test_render_does_not_mark_kim_available(monkeypatch):
     assert described["calculators"]["kim"]["available"] is False
     assert described["calculators"]["emt"]["available"] is True
     assert "Render" in described["calculators"]["kim"]["error"]
+
+
+def test_normal_repeat_is_rejected():
+    with pytest.raises(ValueError, match="size\\[2\\] must be 1"):
+        surface_energy_workflow(size=[1, 1, 2], layers=3, calculator_name="emt")
