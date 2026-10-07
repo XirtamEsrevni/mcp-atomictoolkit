@@ -83,25 +83,26 @@ def submit_phonon_job(
         phonons.read(acoustic=True)
         progress({"completed": 2, "total": 3, "message": "dos"})
         raw = phonons.get_dos(kpts=tuple(kpts))
+        mode_energies = np.asarray(raw.get_energies(), dtype=float)
         grid = raw.sample_grid(npts=npts, width=1e-3)
-        omega = grid.get_energies()
-        dos = grid.get_weights()
+        grid_omega = grid.get_energies()
+        grid_dos = grid.get_weights()
         dos_path = root / "phonon_dos.csv"
         rows = ["omega_eV,dos"]
-        rows.extend(f"{float(w)},{float(d)}" for w, d in zip(omega, dos))
+        rows.extend(f"{float(w)},{float(d)}" for w, d in zip(grid_omega, grid_dos))
         dos_path.write_text("\n".join(rows), encoding="utf-8")
-        positive = [float(w) for w in omega if w > 0]
         progress({"completed": 3, "total": 3, "message": "finished"})
         return {
-            "n_modes": int(len(omega)),
-            "omega_min_eV": float(np.min(omega)),
-            "omega_max_eV": float(np.max(omega)),
-            "n_imaginary": int(np.sum(np.asarray(omega) < -1e-4)),
+            "n_modes": int(mode_energies.size),
+            "omega_min_eV": float(np.min(mode_energies)),
+            "omega_max_eV": float(np.max(mode_energies)),
+            "n_imaginary": int(np.sum(mode_energies < -1e-4)),
+            "positive_mode_count": int(np.sum(mode_energies > 1e-4)),
+            "dos_npts": int(len(grid_omega)),
             "dos_filepath": str(dos_path.absolute()),
             "calculator_requested": calculator_name,
             "calculator_used": calculator_used,
             "calculator_fallbacks": calculator_errors,
-            "positive_mode_count": len(positive),
         }
 
     record = STORE.submit("phonon", _runner, params=params, job_id=job_id)
