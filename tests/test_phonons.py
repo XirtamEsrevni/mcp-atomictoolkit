@@ -39,5 +39,7 @@ def test_phonon_job_writes_dos(tmp_path, monkeypatch):
             break
         time.sleep(0.25)
     assert final["status"] == "completed", final.get("error")
-    assert final["result"]["n_modes"] > 0
+    assert final["result"]["n_modes"] == 3
+    assert final["result"]["dos_npts"] == 10
+    assert final["result"]["n_modes"] != final["result"]["dos_npts"]
     assert job_id in final["result"]["dos_filepath"]
