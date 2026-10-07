@@ -56,12 +56,45 @@ def maybe_load_discovery(calculator_key: str):
         raise ValueError(
             f"Calculator '{calculator_key}' is a Matbench Discovery model and is blocked on Render."
         )
+    calculator = _load_registry_calculator(calculator_key)
+    return calculator, calculator_key, []
+
+
+def _load_registry_calculator(calculator_key: str):
+    """Load from load_calculator when present, otherwise CALCULATORS.
+
+    Released matbench-discovery builds expose the registry as CALCULATORS and
+    do not export load_calculator. Main-branch builds have both.
+    """
     try:
-        from matbench_discovery.calculators import load_calculator
+        import matbench_discovery.calculators as registry
     except Exception as exc:
         raise RuntimeError(
             "matbench-discovery is not installed. Install the discovery extra before "
             f"using calculator_name={calculator_key!r}. Original error: {exc}"
         ) from exc
-    calculator = load_calculator(calculator_key, device="cpu", dtype="float32")
-    return calculator, calculator_key, []
+
+    loader = getattr(registry, "load_calculator", None)
+    if callable(loader):
+        return loader(calculator_key, device="cpu", dtype="float32")
+
+    calculators = getattr(registry, "CALCULATORS", None)
+    if calculators is None or calculator_key not in calculators:
+        raise RuntimeError(
+            f"matbench-discovery has no calculator factory for {calculator_key!r}. "
+            "The installed build exposes neither load_calculator nor CALCULATORS[key]."
+        )
+    spec = calculators[calculator_key]
+    if callable(spec):
+        return spec()
+    for name in ("make_calc", "load", "calculator"):
+        factory = getattr(spec, name, None)
+        if not callable(factory):
+            continue
+        try:
+            return factory(device="cpu", dtype="float32")
+        except TypeError:
+            return factory()
+    raise RuntimeError(
+        f"CALCULATORS[{calculator_key!r}] has no callable calculator factory."
+    )
