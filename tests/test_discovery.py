@@ -56,3 +56,13 @@ def test_released_registry_uses_calculators_mapping(monkeypatch):
     assert calculator is sentinel
     assert used == "mace_mp_0"
     assert errors == []
+
+
+def test_all_registry_keys_are_listed():
+    from mcp_atomictoolkit.discovery_calculators import DISCOVERY_MODELS
+    described = describe_discovery_models()
+    assert len(DISCOVERY_MODELS) == 53
+    assert "emt" not in DISCOVERY_MODELS
+    assert set(described["models"]) == set(DISCOVERY_MODELS)
+    assert "grace_2l_oam" in described["models"]
+    assert "equflashv2_45m_oam" in described["models"]
