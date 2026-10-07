@@ -229,6 +229,11 @@ def resolve_calculator(
 ) -> tuple["ORBCalculator | NequixCalculator | KIMCalculator | EMTCalculator", str, list[str]]:
     """Resolve a calculator, optionally falling back when auto-selection is used."""
     calculator_key = _normalize_calculator_name(calculator_name)
+    from mcp_atomictoolkit.discovery_calculators import maybe_load_discovery
+
+    discovered = maybe_load_discovery(calculator_key)
+    if discovered is not None:
+        return discovered
     if calculator_key == "auto":
         candidates = AUTO_CANDIDATES
     else:
@@ -344,4 +349,8 @@ def describe_calculator_workspace() -> dict:
         "integrators": list(INTEGRATORS),
         "structure_types": list(STRUCTURE_TYPES),
         "manipulate_operations": list(MANIPULATE_OPERATIONS),
+        "discovery_models": __import__(
+            "mcp_atomictoolkit.discovery_calculators",
+            fromlist=["describe_discovery_models"],
+        ).describe_discovery_models(),
     }
