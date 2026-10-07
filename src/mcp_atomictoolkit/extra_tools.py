@@ -20,6 +20,7 @@ from mcp_atomictoolkit.workflows.job_workflows import (
     list_jobs,
     submit_md_job,
 )
+from mcp_atomictoolkit.workflows.surface import surface_energy_workflow
 
 _REGISTERED = False
 
@@ -202,4 +203,31 @@ def register_extra_tools(mcp, run_tool: Callable[..., Dict]) -> None:
         return run_tool("cancel_job", cancel_job, job_id=job_id)
 
     cancel_job_tool.__name__ = "cancel_job"
+
+    @mcp.tool(task=TaskConfig(mode="optional"))
+    async def surface_energy_workflow_tool(
+        formula: str = "Cu",
+        crystal_system: str = "fcc",
+        lattice_constant: float = 3.6,
+        miller: Optional[List[int]] = None,
+        size: Optional[List[int]] = None,
+        layers: int = 3,
+        vacuum: float = 8.0,
+        calculator_name: str = DEFAULT_CALCULATOR_NAME,
+    ) -> Dict:
+        """Compute a slab surface energy in J/m^2 from bulk and slab single points."""
+        return run_tool(
+            "surface_energy_workflow",
+            surface_energy_workflow,
+            formula=formula,
+            crystal_system=crystal_system,
+            lattice_constant=lattice_constant,
+            miller=miller or [1, 1, 1],
+            size=size or [2, 2, 1],
+            layers=layers,
+            vacuum=vacuum,
+            calculator_name=calculator_name,
+        )
+
+    surface_energy_workflow_tool.__name__ = "surface_energy_workflow"
     _REGISTERED = True
