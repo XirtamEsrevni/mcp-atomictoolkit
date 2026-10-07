@@ -163,6 +163,10 @@ TOOL_NAMES = [
     "write_structure_file",
     "optimize_with_mlip",
     "create_download_artifact",
+    "submit_md_job",
+    "get_job",
+    "list_jobs",
+    "cancel_job",
 ]
 
 

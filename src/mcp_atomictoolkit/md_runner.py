@@ -143,6 +143,9 @@ def run_md(
     pressure_GPa: float = 0.0,
     taup: float = 1000.0,
     compressibility_au: Optional[float] = None,
+    progress_callback=None,
+    should_stop=None,
+    chunk_steps: int = 20,
 ) -> Dict:
     """Run an ASE molecular dynamics simulation.
 
@@ -224,7 +227,17 @@ def run_md(
         temperatures.append(atoms.get_temperature())
 
     md.attach(_record_temperature, interval=1)
-    md.run(steps)
+    completed = 0
+    chunk = max(1, int(chunk_steps))
+    while completed < steps:
+        if should_stop is not None and should_stop():
+            break
+        n = min(chunk, steps - completed)
+        md.run(n)
+        completed += n
+        if progress_callback is not None:
+            progress_callback(completed, steps)
+    steps = completed
 
     final_potential = atoms.get_potential_energy()
     final_kinetic = atoms.get_kinetic_energy()
