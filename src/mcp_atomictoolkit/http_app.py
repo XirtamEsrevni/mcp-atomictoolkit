@@ -168,6 +168,7 @@ TOOL_NAMES = [
     "list_jobs",
     "cancel_job",
     "surface_energy_workflow",
+    "submit_neb_job",
 ]
 
 
