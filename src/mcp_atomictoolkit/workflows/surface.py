@@ -36,11 +36,19 @@ def surface_energy_workflow(
 
     gamma = (E_slab - N_slab * E_bulk_per_atom) / (2 A)
     """
-    miller = list(miller or [1, 1, 1])
-    size = list(size or [2, 2, 1])
+    miller = [int(v) for v in (miller or [1, 1, 1])]
+    size = [int(v) for v in (size or [2, 2, 1])]
     if len(miller) != 3 or len(size) != 3:
         raise ValueError("miller and size must each have 3 integers")
-    n_atoms = int(np.prod(size) * layers)
+    if any(v < 1 for v in size):
+        raise ValueError("size values must be at least 1")
+    if size[2] != 1:
+        raise ValueError(
+            "size[2] must be 1. The slab is already vacuum-padded along the surface normal; "
+            "repeating it creates extra free surfaces that the 2A normalization does not count. "
+            "Increase layers instead."
+        )
+    n_atoms = int(np.prod(size[:2]) * layers)
     if _render_limited() and (n_atoms > 32 or layers > 4):
         raise ValueError(
             f"Surface cell would have {n_atoms} atoms. Render allows at most 32 atoms and 4 layers."
