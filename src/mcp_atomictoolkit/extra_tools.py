@@ -25,6 +25,7 @@ from mcp_atomictoolkit.workflows.neb import submit_neb_job
 from mcp_atomictoolkit.workflows.phonons import submit_phonon_job
 from mcp_atomictoolkit.workflows.phonon_bands import submit_phonon_bands_job
 from mcp_atomictoolkit.workflows.fit_lj import fit_lj_and_save
+from mcp_atomictoolkit.workflows.fit_morse import fit_morse_and_save
 from mcp_atomictoolkit.workflows.dynasor import submit_dynasor_job
 from mcp_atomictoolkit.catalog import (
     list_catalog_entries,
@@ -336,6 +337,28 @@ def register_extra_tools(mcp, run_tool: Callable[..., Dict]) -> None:
         )
 
     fit_lj_workflow.__name__ = "fit_lj_workflow"
+
+    @mcp.tool(task=TaskConfig(mode="optional"))
+    async def fit_morse_workflow(
+        input_paths: list,
+        reference_energies: list,
+        output_path: str = "fitted_morse.json",
+        name: str = "fitted_morse",
+        input_format: Optional[str] = None,
+    ) -> Dict:
+        """Fit a Morse potential to reference energies and register it. Fits Render."""
+        return run_tool(
+            "fit_morse_workflow",
+            fit_morse_and_save,
+            input_paths=input_paths,
+            reference_energies=reference_energies,
+            output_path=output_path,
+            name=name,
+            input_format=input_format,
+        )
+
+    fit_morse_workflow.__name__ = "fit_morse_workflow"
+
 
 
     @mcp.tool(task=TaskConfig(mode="optional"))

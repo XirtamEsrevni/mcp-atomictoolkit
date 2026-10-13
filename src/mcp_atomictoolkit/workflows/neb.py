@@ -39,9 +39,12 @@ def submit_neb_job(
 ) -> Dict:
     """Start an ASE NEB and return a job_id. Poll get_job from a later session."""
     if _render_blocked():
-        raise ValueError(
-            "NEB is disabled on the Render memory profile. It needs several images in memory."
-        )
+        light = calculator_name.lower() in {"emt", "lj", "morse", "auto"}
+        if not (light and n_images <= 3):
+            raise ValueError(
+                "NEB on Render is limited to light calculators (emt/lj/morse) "
+                "and n_images <= 3."
+            )
     if n_images < 1:
         raise ValueError("n_images must be at least 1")
     if n_images > 7:

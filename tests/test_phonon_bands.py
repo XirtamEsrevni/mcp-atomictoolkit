@@ -10,10 +10,10 @@ from ase.io import write
 from mcp_atomictoolkit.workflows import phonon_bands as pb
 
 
-def test_phonon_bands_blocked_on_render(monkeypatch):
+def test_phonon_bands_blocks_large_on_render(monkeypatch):
     monkeypatch.setenv("MEMORY_PROFILE", "render")
     with pytest.raises(ValueError, match="Render"):
-        pb.submit_phonon_bands_job("cu.cif")
+        pb.submit_phonon_bands_job("cu.cif", supercell=[2, 2, 2])
 
 
 def test_phonon_bands_rejects_bad_supercell(monkeypatch):
