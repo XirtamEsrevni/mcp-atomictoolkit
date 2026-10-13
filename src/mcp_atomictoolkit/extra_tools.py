@@ -24,6 +24,12 @@ from mcp_atomictoolkit.workflows.surface import surface_energy_workflow
 from mcp_atomictoolkit.workflows.neb import submit_neb_job
 from mcp_atomictoolkit.workflows.phonons import submit_phonon_job
 from mcp_atomictoolkit.workflows.dynasor import submit_dynasor_job
+from mcp_atomictoolkit.catalog import (
+    list_catalog_entries,
+    register_catalog_entry,
+    remove_catalog_entry,
+)
+from mcp_atomictoolkit.workflows.elastic import compute_elastic_tensor
 
 _REGISTERED = False
 
@@ -309,5 +315,63 @@ def register_extra_tools(mcp, run_tool: Callable[..., Dict]) -> None:
         )
 
     submit_dynasor_job_tool.__name__ = "submit_dynasor_job"
+
+    @mcp.tool(task=TaskConfig(mode="optional"))
+    async def list_catalog_entries_tool(kind: Optional[str] = None) -> Dict:
+        """List model/dataset/potential catalog entries."""
+        return run_tool("list_catalog_entries", list_catalog_entries, kind=kind)
+
+    list_catalog_entries_tool.__name__ = "list_catalog_entries"
+
+    @mcp.tool(task=TaskConfig(mode="optional"))
+    async def register_catalog_entry_tool(
+        name: str,
+        kind: str,
+        uri: str,
+        metadata: Optional[Dict] = None,
+    ) -> Dict:
+        """Register or update a catalog entry (kind: model, dataset, potential, calculator)."""
+        return run_tool(
+            "register_catalog_entry",
+            register_catalog_entry,
+            name=name,
+            kind=kind,
+            uri=uri,
+            metadata=metadata,
+        )
+
+    register_catalog_entry_tool.__name__ = "register_catalog_entry"
+
+    @mcp.tool(task=TaskConfig(mode="optional"))
+    async def remove_catalog_entry_tool(name: str, kind: str) -> Dict:
+        """Remove a catalog entry by name and kind."""
+        return run_tool(
+            "remove_catalog_entry",
+            remove_catalog_entry,
+            name=name,
+            kind=kind,
+        )
+
+    remove_catalog_entry_tool.__name__ = "remove_catalog_entry"
+
+    @mcp.tool(task=TaskConfig(mode="optional"))
+    async def compute_elastic_tensor_workflow(
+        input_filepath: str,
+        calculator_name: str = DEFAULT_CALCULATOR_NAME,
+        strain: float = 0.005,
+        input_format: Optional[str] = None,
+    ) -> Dict:
+        """Compute the full Voigt elastic tensor (Cij) and derived moduli."""
+        return run_tool(
+            "compute_elastic_tensor_workflow",
+            compute_elastic_tensor,
+            input_filepath=input_filepath,
+            calculator_name=calculator_name,
+            strain=strain,
+            input_format=input_format,
+        )
+
+    compute_elastic_tensor_workflow.__name__ = "compute_elastic_tensor_workflow"
+
 
     _REGISTERED = True
