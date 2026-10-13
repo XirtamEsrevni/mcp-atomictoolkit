@@ -23,6 +23,7 @@ from mcp_atomictoolkit.workflows.job_workflows import (
 from mcp_atomictoolkit.workflows.surface import surface_energy_workflow
 from mcp_atomictoolkit.workflows.neb import submit_neb_job
 from mcp_atomictoolkit.workflows.phonons import submit_phonon_job
+from mcp_atomictoolkit.workflows.phonon_bands import submit_phonon_bands_job
 from mcp_atomictoolkit.workflows.dynasor import submit_dynasor_job
 from mcp_atomictoolkit.catalog import (
     list_catalog_entries,
@@ -290,6 +291,30 @@ def register_extra_tools(mcp, run_tool: Callable[..., Dict]) -> None:
         )
 
     submit_phonon_job_tool.__name__ = "submit_phonon_job"
+
+    @mcp.tool(task=TaskConfig(mode="optional"))
+    async def submit_phonon_bands_job_tool(
+        input_filepath: str,
+        calculator_name: str = DEFAULT_CALCULATOR_NAME,
+        supercell: Optional[list] = None,
+        delta: float = 0.01,
+        npoints: int = 20,
+        input_format: Optional[str] = None,
+    ) -> Dict:
+        """Start a phonon band-structure job along a high-symmetry path. Poll get_job. Disabled on Render."""
+        return run_tool(
+            "submit_phonon_bands_job",
+            submit_phonon_bands_job,
+            input_filepath=input_filepath,
+            calculator_name=calculator_name,
+            supercell=supercell,
+            delta=delta,
+            npoints=npoints,
+            input_format=input_format,
+        )
+
+    submit_phonon_bands_job_tool.__name__ = "submit_phonon_bands_job"
+
     @mcp.tool(task=TaskConfig(mode="optional"))
     async def submit_dynasor_job_tool(
         input_filepath: str,
