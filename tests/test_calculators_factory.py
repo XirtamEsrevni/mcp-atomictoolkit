@@ -111,7 +111,7 @@ def test_get_kim_calculator_falls_back_to_default_model(monkeypatch):
     assert calculator.model_id == calculators.KIM_DEFAULT_MODEL
 
 
-def test_resolve_calculator_falls_back_when_requested_fails(monkeypatch):
+def test_resolve_calculator_explicit_does_not_fall_back(monkeypatch):
     def fake_get_calculator_by_key(key, species):
         if key == "kim":
             raise RuntimeError("kim missing")
@@ -119,7 +119,5 @@ def test_resolve_calculator_falls_back_when_requested_fails(monkeypatch):
 
     monkeypatch.setattr(calculators, "_get_calculator_by_key", fake_get_calculator_by_key)
 
-    calculator, used, errors = calculators.resolve_calculator("kim", species=["Al"])
-    assert calculator == {"name": "orb"}
-    assert used == "orb"
-    assert any(error.startswith("kim:") for error in errors)
+    with pytest.raises(RuntimeError, match="kim"):
+        calculators.resolve_calculator("kim", species=["Al"])
