@@ -75,8 +75,15 @@ _STRUCTURE_SUFFIXES = {".xyz", ".extxyz", ".cif", ".vasp", ".poscar"}
 def _is_artifact_candidate(value: Any) -> bool:
     if not isinstance(value, str):
         return False
-    path = Path(value).expanduser()
-    if not path.exists() or not path.is_file():
+    # Error messages are scanned with result payloads. A long slash-free
+    # string makes Path.exists() raise ENAMETOOLONG on Linux.
+    if len(value) > 240 or "\n" in value or "\x00" in value:
+        return False
+    try:
+        path = Path(value).expanduser()
+        if not path.exists() or not path.is_file():
+            return False
+    except OSError:
         return False
     return path.suffix.lower() in _ALLOWED_SUFFIXES
 
