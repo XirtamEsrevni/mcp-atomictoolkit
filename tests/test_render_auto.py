@@ -18,5 +18,5 @@ def test_render_auto_is_emt_only(monkeypatch):
     calculator, used, _errors = calculators.resolve_calculator("auto")
     assert used == "emt"
     assert calculator == "emt-calc"
-    with pytest.raises(RuntimeError, match="kim"):
+    with pytest.raises(ValueError, match="512 MB"):
         calculators.resolve_calculator("kim")
