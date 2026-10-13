@@ -38,6 +38,9 @@ full = [
     "orb-models>=0.4.2",
     "pynanoflann>=0.10.0",
 ]
+dynasor = [
+    "dynasor>=2.0.0",
+]
 test = [
     "hypothesis>=6.112.0",
     "pytest>=8.3.0",
