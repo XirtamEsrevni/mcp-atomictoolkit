@@ -24,6 +24,7 @@ from mcp_atomictoolkit.workflows.surface import surface_energy_workflow
 from mcp_atomictoolkit.workflows.neb import submit_neb_job
 from mcp_atomictoolkit.workflows.phonons import submit_phonon_job
 from mcp_atomictoolkit.workflows.phonon_bands import submit_phonon_bands_job
+from mcp_atomictoolkit.workflows.fit_lj import fit_lj_and_save
 from mcp_atomictoolkit.workflows.dynasor import submit_dynasor_job
 from mcp_atomictoolkit.catalog import (
     list_catalog_entries,
@@ -314,6 +315,28 @@ def register_extra_tools(mcp, run_tool: Callable[..., Dict]) -> None:
         )
 
     submit_phonon_bands_job_tool.__name__ = "submit_phonon_bands_job"
+
+    @mcp.tool(task=TaskConfig(mode="optional"))
+    async def fit_lj_workflow(
+        input_paths: list,
+        reference_energies: list,
+        output_path: str = "fitted_lj.json",
+        name: str = "fitted_lj",
+        input_format: Optional[str] = None,
+    ) -> Dict:
+        """Fit a Lennard-Jones potential to reference energies and register it."""
+        return run_tool(
+            "fit_lj_workflow",
+            fit_lj_and_save,
+            input_paths=input_paths,
+            reference_energies=reference_energies,
+            output_path=output_path,
+            name=name,
+            input_format=input_format,
+        )
+
+    fit_lj_workflow.__name__ = "fit_lj_workflow"
+
 
     @mcp.tool(task=TaskConfig(mode="optional"))
     async def submit_dynasor_job_tool(
