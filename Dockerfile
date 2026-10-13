@@ -1,5 +1,5 @@
 # Default image for free-tier hosts (Hugging Face Spaces, small VMs).
-# EMT + ASE + pymatgen only. No OpenKIM compile, no Orb/Nequix/PyTorch.
+# ASE analytical potentials only: EMT, Lennard-Jones, Morse. No OpenKIM, PyTorch, or JAX.
 FROM python:3.12-slim-bookworm
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
