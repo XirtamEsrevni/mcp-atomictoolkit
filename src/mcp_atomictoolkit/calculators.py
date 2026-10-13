@@ -5,6 +5,8 @@ import os
 import warnings
 from typing import TYPE_CHECKING, Sequence
 
+from mcp_atomictoolkit.calculator_registry import get_registered
+
 if TYPE_CHECKING:
     from ase.calculators.emt import EMT as EMTCalculator
     from ase.calculators.kim.kim import KIM as KIMCalculator
@@ -267,6 +269,10 @@ def resolve_calculator(
     discovered = maybe_load_discovery(calculator_key)
     if discovered is not None:
         return discovered
+    registered = get_registered(calculator_key)
+    if registered is not None:
+        calculator = registered()
+        return calculator, calculator_key, []
     if _render_limited() and calculator_key in HEAVY_CANDIDATES:
         raise ValueError(
             f"Calculator '{calculator_key}' is not available on the 512 MB Render image. "
