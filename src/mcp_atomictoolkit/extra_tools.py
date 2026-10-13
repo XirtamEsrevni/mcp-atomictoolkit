@@ -24,6 +24,7 @@ from mcp_atomictoolkit.workflows.surface import surface_energy_workflow
 from mcp_atomictoolkit.workflows.neb import submit_neb_job
 from mcp_atomictoolkit.workflows.phonons import submit_phonon_job
 from mcp_atomictoolkit.workflows.dynasor import submit_dynasor_job
+from mcp_atomictoolkit.calculator_registry import register_calculator_from_file, list_registered
 
 _REGISTERED = False
 
@@ -309,5 +310,30 @@ def register_extra_tools(mcp, run_tool: Callable[..., Dict]) -> None:
         )
 
     submit_dynasor_job_tool.__name__ = "submit_dynasor_job"
+
+    @mcp.tool(task=TaskConfig(mode="optional"))
+    async def register_calculator_from_file_tool(
+        name: str,
+        source_path: str,
+        factory_name: str = "get_calculator",
+    ) -> Dict:
+        """Register a user-supplied ASE calculator factory from a local .py file."""
+        return run_tool(
+            "register_calculator_from_file",
+            register_calculator_from_file,
+            name=name,
+            source_path=source_path,
+            factory_name=factory_name,
+        )
+
+    register_calculator_from_file_tool.__name__ = "register_calculator_from_file"
+
+    @mcp.tool(task=TaskConfig(mode="optional"))
+    async def list_registered_calculators_tool() -> Dict:
+        """List calculators registered at runtime."""
+        return {"registered": list_registered()}
+
+    list_registered_calculators_tool.__name__ = "list_registered_calculators"
+
 
     _REGISTERED = True
