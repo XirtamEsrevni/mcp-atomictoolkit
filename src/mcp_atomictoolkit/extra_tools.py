@@ -23,6 +23,7 @@ from mcp_atomictoolkit.workflows.job_workflows import (
 from mcp_atomictoolkit.workflows.surface import surface_energy_workflow
 from mcp_atomictoolkit.workflows.neb import submit_neb_job
 from mcp_atomictoolkit.workflows.phonons import submit_phonon_job
+from mcp_atomictoolkit.workflows.dynasor import submit_dynasor_job
 
 _REGISTERED = False
 
@@ -282,4 +283,31 @@ def register_extra_tools(mcp, run_tool: Callable[..., Dict]) -> None:
         )
 
     submit_phonon_job_tool.__name__ = "submit_phonon_job"
+    @mcp.tool(task=TaskConfig(mode="optional"))
+    async def submit_dynasor_job_tool(
+        input_filepath: str,
+        dt_fs: float = 5.0,
+        q_max: float = 20.0,
+        window_size: int = 100,
+        window_step: Optional[int] = None,
+        max_frames: Optional[int] = None,
+        input_format: Optional[str] = None,
+        calculate_currents: bool = False,
+    ) -> Dict:
+        """Start a Dynasor dynamical structure factor job. Requires dynasor. Poll get_job. Disabled on Render."""
+        return run_tool(
+            "submit_dynasor_job",
+            submit_dynasor_job,
+            input_filepath=input_filepath,
+            dt_fs=dt_fs,
+            q_max=q_max,
+            window_size=window_size,
+            window_step=window_step,
+            max_frames=max_frames,
+            input_format=input_format,
+            calculate_currents=calculate_currents,
+        )
+
+    submit_dynasor_job_tool.__name__ = "submit_dynasor_job"
+
     _REGISTERED = True
