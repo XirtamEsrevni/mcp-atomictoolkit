@@ -36,7 +36,13 @@ def submit_phonon_bands_job(
 ) -> Dict:
     """Start a finite-displacement phonon band structure. Poll get_job. Disabled on Render."""
     if _render_blocked():
-        raise ValueError("Phonon bands are disabled on the Render memory profile.")
+        light = calculator_name.lower() in {"emt", "lj", "morse", "auto"}
+        sc = supercell or [1, 1, 1]
+        if not (light and int(__import__("numpy").prod(sc)) <= 2):
+            raise ValueError(
+                "Phonon bands on Render are limited to light calculators "
+                "(emt/lj/morse) and supercell product <= 2."
+            )
     supercell = [int(v) for v in (supercell or [1, 1, 1])]
     if any(v < 1 for v in supercell):
         raise ValueError("supercell values must be at least 1")

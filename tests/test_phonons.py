@@ -9,10 +9,10 @@ from mcp_atomictoolkit.workflows import phonons as phonon_mod
 from mcp_atomictoolkit.workflows.phonons import submit_phonon_job
 
 
-def test_render_rejects_phonons(monkeypatch):
+def test_render_rejects_large_phonons(monkeypatch):
     monkeypatch.setenv("MEMORY_PROFILE", "render")
-    with pytest.raises(ValueError, match="disabled on the Render"):
-        submit_phonon_job("cu.extxyz")
+    with pytest.raises(ValueError, match="Render"):
+        submit_phonon_job("cu.extxyz", supercell=[2, 2, 2])
 
 
 def test_phonon_job_writes_dos(tmp_path, monkeypatch):

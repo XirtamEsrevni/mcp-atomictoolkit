@@ -9,10 +9,10 @@ from mcp_atomictoolkit.workflows import neb as neb_mod
 from mcp_atomictoolkit.workflows.neb import submit_neb_job
 
 
-def test_render_rejects_neb(monkeypatch):
+def test_render_rejects_large_neb(monkeypatch):
     monkeypatch.setenv("MEMORY_PROFILE", "render")
-    with pytest.raises(ValueError, match="disabled on the Render"):
-        submit_neb_job("a.extxyz", "b.extxyz")
+    with pytest.raises(ValueError, match="Render"):
+        submit_neb_job("a.extxyz", "b.extxyz", n_images=5)
 
 
 def test_neb_job_returns_a_barrier(tmp_path, monkeypatch):
