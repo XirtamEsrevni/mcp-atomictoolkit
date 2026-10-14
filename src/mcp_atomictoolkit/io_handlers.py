@@ -68,3 +68,26 @@ def get_supported_formats() -> dict:
         "xsf": "XCrySDen Structure Format",
         "cfg": "AtomEye configuration format",
     }
+
+
+def export_lammps_data(
+    input_filepath: str,
+    output_path: str,
+    atom_style: str = "atomic",
+    input_format: Optional[str] = None,
+) -> dict:
+    """Write a LAMMPS data file from an ASE structure.
+
+    Uses ASE's built-in lammps-data writer. Suitable for Render.
+    """
+    atoms = read(input_filepath, format=input_format)
+    out = Path(output_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    write(out, atoms, format="lammps-data", atom_style=atom_style)
+    return {
+        "output_path": str(out.resolve()),
+        "n_atoms": len(atoms),
+        "formula": atoms.get_chemical_formula(),
+        "atom_style": atom_style,
+        "cell_Angstrom": atoms.cell.lengths().tolist(),
+    }

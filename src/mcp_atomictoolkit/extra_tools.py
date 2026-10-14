@@ -28,6 +28,8 @@ from mcp_atomictoolkit.workflows.fit_lj import fit_lj_and_save
 from mcp_atomictoolkit.workflows.fit_morse import fit_morse_and_save
 from mcp_atomictoolkit.analysis.thermodynamics import trajectory_thermodynamics
 from mcp_atomictoolkit.analysis.comparison import structure_rmsd
+from mcp_atomictoolkit.analysis.lite_isf import lite_intermediate_scattering
+from mcp_atomictoolkit.io_handlers import export_lammps_data
 from mcp_atomictoolkit.workflows.dynasor import submit_dynasor_job
 from mcp_atomictoolkit.catalog import (
     list_catalog_entries,
@@ -398,6 +400,47 @@ def register_extra_tools(mcp, run_tool: Callable[..., Dict]) -> None:
         )
 
     structure_rmsd_workflow.__name__ = "structure_rmsd_workflow"
+
+    @mcp.tool(task=TaskConfig(mode="optional"))
+    async def lite_isf_workflow(
+        input_filepath: str,
+        q_magnitude: float = 2.0,
+        dt_fs: float = 5.0,
+        max_lag: int = 50,
+        input_format: Optional[str] = None,
+    ) -> Dict:
+        """Lightweight intermediate scattering function. Pure numpy, fits Render."""
+        return run_tool(
+            "lite_isf_workflow",
+            lite_intermediate_scattering,
+            input_filepath=input_filepath,
+            q_magnitude=q_magnitude,
+            dt_fs=dt_fs,
+            max_lag=max_lag,
+            input_format=input_format,
+        )
+
+    lite_isf_workflow.__name__ = "lite_isf_workflow"
+
+    @mcp.tool(task=TaskConfig(mode="optional"))
+    async def export_lammps_data_workflow(
+        input_filepath: str,
+        output_path: str,
+        atom_style: str = "atomic",
+        input_format: Optional[str] = None,
+    ) -> Dict:
+        """Export a structure to a LAMMPS data file. Fits Render."""
+        return run_tool(
+            "export_lammps_data_workflow",
+            export_lammps_data,
+            input_filepath=input_filepath,
+            output_path=output_path,
+            atom_style=atom_style,
+            input_format=input_format,
+        )
+
+    export_lammps_data_workflow.__name__ = "export_lammps_data_workflow"
+
 
 
 
