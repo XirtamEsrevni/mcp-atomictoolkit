@@ -26,6 +26,8 @@ from mcp_atomictoolkit.workflows.phonons import submit_phonon_job
 from mcp_atomictoolkit.workflows.phonon_bands import submit_phonon_bands_job
 from mcp_atomictoolkit.workflows.fit_lj import fit_lj_and_save
 from mcp_atomictoolkit.workflows.fit_morse import fit_morse_and_save
+from mcp_atomictoolkit.analysis.thermodynamics import trajectory_thermodynamics
+from mcp_atomictoolkit.analysis.comparison import structure_rmsd
 from mcp_atomictoolkit.workflows.dynasor import submit_dynasor_job
 from mcp_atomictoolkit.catalog import (
     list_catalog_entries,
@@ -358,6 +360,45 @@ def register_extra_tools(mcp, run_tool: Callable[..., Dict]) -> None:
         )
 
     fit_morse_workflow.__name__ = "fit_morse_workflow"
+
+    @mcp.tool(task=TaskConfig(mode="optional"))
+    async def trajectory_thermodynamics_workflow(
+        input_filepath: str,
+        input_format: Optional[str] = None,
+        skip_frames: int = 0,
+    ) -> Dict:
+        """Average energy, forces, pressure, and temperature from a trajectory. Fits Render."""
+        return run_tool(
+            "trajectory_thermodynamics_workflow",
+            trajectory_thermodynamics,
+            input_filepath=input_filepath,
+            input_format=input_format,
+            skip_frames=skip_frames,
+        )
+
+    trajectory_thermodynamics_workflow.__name__ = "trajectory_thermodynamics_workflow"
+
+    @mcp.tool(task=TaskConfig(mode="optional"))
+    async def structure_rmsd_workflow(
+        reference_filepath: str,
+        target_filepath: str,
+        reference_format: Optional[str] = None,
+        target_format: Optional[str] = None,
+        align: bool = True,
+    ) -> Dict:
+        """RMSD between two structures with optional Kabsch alignment. Fits Render."""
+        return run_tool(
+            "structure_rmsd_workflow",
+            structure_rmsd,
+            reference_filepath=reference_filepath,
+            target_filepath=target_filepath,
+            reference_format=reference_format,
+            target_format=target_format,
+            align=align,
+        )
+
+    structure_rmsd_workflow.__name__ = "structure_rmsd_workflow"
+
 
 
 
