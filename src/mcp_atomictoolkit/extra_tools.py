@@ -33,6 +33,7 @@ from mcp_atomictoolkit.io_handlers import export_lammps_data
 from mcp_atomictoolkit.workflows.batch import batch_single_point
 from mcp_atomictoolkit.analysis.coordination import coordination_analysis
 from mcp_atomictoolkit.workflows.constraints import apply_fixed_atoms
+from mcp_atomictoolkit.workflows.substitute import substitute_atom
 from mcp_atomictoolkit.workflows.dynasor import submit_dynasor_job
 from mcp_atomictoolkit.catalog import (
     list_catalog_entries,
@@ -500,6 +501,30 @@ def register_extra_tools(mcp, run_tool: Callable[..., Dict]) -> None:
         )
 
     apply_fixed_atoms_workflow.__name__ = "apply_fixed_atoms_workflow"
+
+    @mcp.tool(task=TaskConfig(mode="optional"))
+    async def substitute_atom_workflow(
+        input_filepath: str,
+        output_filepath: str,
+        index: int,
+        new_symbol: str,
+        input_format: Optional[str] = None,
+        output_format: Optional[str] = None,
+    ) -> Dict:
+        """Replace one atom with a new element. Fits Render."""
+        return run_tool(
+            "substitute_atom_workflow",
+            substitute_atom,
+            input_filepath=input_filepath,
+            output_filepath=output_filepath,
+            index=index,
+            new_symbol=new_symbol,
+            input_format=input_format,
+            output_format=output_format,
+        )
+
+    substitute_atom_workflow.__name__ = "substitute_atom_workflow"
+
 
 
 
