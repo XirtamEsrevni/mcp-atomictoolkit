@@ -30,6 +30,7 @@ from mcp_atomictoolkit.analysis.thermodynamics import trajectory_thermodynamics
 from mcp_atomictoolkit.analysis.comparison import structure_rmsd
 from mcp_atomictoolkit.analysis.lite_isf import lite_intermediate_scattering
 from mcp_atomictoolkit.io_handlers import export_lammps_data
+from mcp_atomictoolkit.workflows.batch import batch_single_point
 from mcp_atomictoolkit.workflows.dynasor import submit_dynasor_job
 from mcp_atomictoolkit.catalog import (
     list_catalog_entries,
@@ -440,6 +441,26 @@ def register_extra_tools(mcp, run_tool: Callable[..., Dict]) -> None:
         )
 
     export_lammps_data_workflow.__name__ = "export_lammps_data_workflow"
+
+    @mcp.tool(task=TaskConfig(mode="optional"))
+    async def batch_single_point_workflow(
+        input_paths: list,
+        calculator_name: str = DEFAULT_CALCULATOR_NAME,
+        input_format: Optional[str] = None,
+        max_structures: int = 20,
+    ) -> Dict:
+        """Single-point energy for each structure in a list. Limited batch size for Render."""
+        return run_tool(
+            "batch_single_point_workflow",
+            batch_single_point,
+            input_paths=input_paths,
+            calculator_name=calculator_name,
+            input_format=input_format,
+            max_structures=max_structures,
+        )
+
+    batch_single_point_workflow.__name__ = "batch_single_point_workflow"
+
 
 
 
