@@ -31,6 +31,8 @@ from mcp_atomictoolkit.analysis.comparison import structure_rmsd
 from mcp_atomictoolkit.analysis.lite_isf import lite_intermediate_scattering
 from mcp_atomictoolkit.io_handlers import export_lammps_data
 from mcp_atomictoolkit.workflows.batch import batch_single_point
+from mcp_atomictoolkit.analysis.coordination import coordination_analysis
+from mcp_atomictoolkit.workflows.constraints import apply_fixed_atoms
 from mcp_atomictoolkit.workflows.dynasor import submit_dynasor_job
 from mcp_atomictoolkit.catalog import (
     list_catalog_entries,
@@ -460,6 +462,45 @@ def register_extra_tools(mcp, run_tool: Callable[..., Dict]) -> None:
         )
 
     batch_single_point_workflow.__name__ = "batch_single_point_workflow"
+
+    @mcp.tool(task=TaskConfig(mode="optional"))
+    async def coordination_analysis_workflow(
+        input_filepath: str,
+        cutoff: float = 3.0,
+        input_format: Optional[str] = None,
+    ) -> Dict:
+        """Per-atom and species-averaged coordination numbers. Fits Render."""
+        return run_tool(
+            "coordination_analysis_workflow",
+            coordination_analysis,
+            input_filepath=input_filepath,
+            cutoff=cutoff,
+            input_format=input_format,
+        )
+
+    coordination_analysis_workflow.__name__ = "coordination_analysis_workflow"
+
+    @mcp.tool(task=TaskConfig(mode="optional"))
+    async def apply_fixed_atoms_workflow(
+        input_filepath: str,
+        output_filepath: str,
+        indices: list,
+        input_format: Optional[str] = None,
+        output_format: Optional[str] = None,
+    ) -> Dict:
+        """Write a structure with FixAtoms on the given indices. Fits Render."""
+        return run_tool(
+            "apply_fixed_atoms_workflow",
+            apply_fixed_atoms,
+            input_filepath=input_filepath,
+            output_filepath=output_filepath,
+            indices=indices,
+            input_format=input_format,
+            output_format=output_format,
+        )
+
+    apply_fixed_atoms_workflow.__name__ = "apply_fixed_atoms_workflow"
+
 
 
 
