@@ -38,6 +38,9 @@ full = [
     "orb-models>=0.4.2",
     "pynanoflann>=0.10.0",
 ]
+phonopy = [
+    "phonopy>=2.0.0",
+]
 dynasor = [
     "dynasor>=2.0.0",
 ]
