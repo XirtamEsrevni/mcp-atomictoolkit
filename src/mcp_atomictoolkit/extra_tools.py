@@ -34,6 +34,8 @@ from mcp_atomictoolkit.workflows.batch import batch_single_point
 from mcp_atomictoolkit.analysis.coordination import coordination_analysis
 from mcp_atomictoolkit.workflows.constraints import apply_fixed_atoms
 from mcp_atomictoolkit.workflows.substitute import substitute_atom
+from mcp_atomictoolkit.workflows.batch_optimize import batch_optimize
+from mcp_atomictoolkit.workflows.phonopy_job import submit_phonopy_job
 from mcp_atomictoolkit.workflows.dynasor import submit_dynasor_job
 from mcp_atomictoolkit.catalog import (
     list_catalog_entries,
@@ -524,6 +526,53 @@ def register_extra_tools(mcp, run_tool: Callable[..., Dict]) -> None:
         )
 
     substitute_atom_workflow.__name__ = "substitute_atom_workflow"
+
+    @mcp.tool(task=TaskConfig(mode="optional"))
+    async def batch_optimize_workflow(
+        input_paths: list,
+        output_dir: str,
+        calculator_name: str = DEFAULT_CALCULATOR_NAME,
+        max_steps: int = 20,
+        fmax: float = 0.1,
+        input_format: Optional[str] = None,
+        max_structures: int = 10,
+    ) -> Dict:
+        """Relax a list of structures with a step cap. Default limits fit Render."""
+        return run_tool(
+            "batch_optimize_workflow",
+            batch_optimize,
+            input_paths=input_paths,
+            output_dir=output_dir,
+            calculator_name=calculator_name,
+            max_steps=max_steps,
+            fmax=fmax,
+            input_format=input_format,
+            max_structures=max_structures,
+        )
+
+    batch_optimize_workflow.__name__ = "batch_optimize_workflow"
+
+    @mcp.tool(task=TaskConfig(mode="optional"))
+    async def submit_phonopy_job_tool(
+        input_filepath: str,
+        calculator_name: str = DEFAULT_CALCULATOR_NAME,
+        supercell: Optional[list] = None,
+        displacement: float = 0.01,
+        input_format: Optional[str] = None,
+    ) -> Dict:
+        """Start a phonopy phonon DOS job. Requires phonopy. Disabled on Render. Poll get_job."""
+        return run_tool(
+            "submit_phonopy_job",
+            submit_phonopy_job,
+            input_filepath=input_filepath,
+            calculator_name=calculator_name,
+            supercell=supercell,
+            displacement=displacement,
+            input_format=input_format,
+        )
+
+    submit_phonopy_job_tool.__name__ = "submit_phonopy_job"
+
 
 
 
