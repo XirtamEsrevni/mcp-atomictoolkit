@@ -39,6 +39,7 @@ If you need atomistic workflows exposed as MCP tools (instead of hand-wiring scr
 - **Structure import** from xyz/cif/POSCAR text
 - **Edits and defects**: rotate, translate, strain, supercell, wrap, vacancy, substitute, interstitial
 - **Calculators**: `auto` tries `kim` → `orb` → `nequix` → ASE **EMT** (Al/Cu/Ag/Au/Ni/Pd/Pt)
+- **Analytical fits**: Lennard-Jones, Morse, and Buckingham pair potentials (Render-friendly)
 - **Optimization** and **single-point** energy/forces/stress
 - **Molecular dynamics**: Velocity Verlet, Langevin, NVT Berendsen, **NPT Berendsen**
 - **Recipe tool** `relax_and_md_workflow` (relax then MD)
