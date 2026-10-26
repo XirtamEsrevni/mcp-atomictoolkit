@@ -141,6 +141,7 @@ _mcp_root_app = _ArtifactBaseUrlContextApp(
 README_PATH = Path(__file__).resolve().parents[2] / "README.md"
 TOOL_NAMES = [
     "list_workspace_capabilities_workflow",
+    "list_discovery_calculators_workflow",
     "build_structure_workflow",
     "import_structure_workflow",
     "convert_structure_workflow",
