@@ -6,6 +6,7 @@ Listing uses a static first slice so capabilities do not pull in torch.
 
 from __future__ import annotations
 
+import importlib.util
 import os
 from typing import Any
 
@@ -68,6 +69,63 @@ DISCOVERY_MODELS = (
     "equflashv2_45m_oam",
 )
 
+# Approximate package mapping for import checks (does not load the models).
+_MODEL_PACKAGES = {
+    "mace_mp_0": "mace",
+    "mace_mpa_0": "mace",
+    "orb_v2": "orb_models",
+    "orb_v3": "orb_models",
+    "orb_v2_mptrj": "orb_models",
+    "mattersim_v1_5m": "mattersim",
+    "sevennet_0": "sevenn",
+    "sevennet_l3i5": "sevenn",
+    "sevennet_mf_ompa": "sevenn",
+    "sevennet_omni_i12": "sevenn",
+    "grace_2l_oam": "grace",
+    "grace_1l_oam": "grace",
+    "grace_2l_oam_l": "grace",
+    "grace_3l_oam_l": "grace",
+    "grace_2l_mptrj": "grace",
+    "chgnet_0_3_0": "chgnet",
+    "hienet": "hienet",
+    "prophet_oame_mbd": "prophet",
+    "nequip_mp_l_0_1": "nequip",
+    "nequip_oam_l_0_1": "nequip",
+    "nequip_oam_xl_0_1": "nequip",
+    "allegro_mp_l_0_1": "allegro",
+    "allegro_oam_l_0_1": "allegro",
+    "matris_10m_oam": "matris",
+    "matris_10m_mp": "matris",
+    "eqnorm_mptrj": "eqnorm",
+    "nequix_mp_1": "nequix",
+    "nequix_mp_1_pft": "nequix",
+    "pet_oam_xl_1_0_0": "pet",
+    "alphanet_v1_mptrj": "alphanet",
+    "alphanet_v1_oam": "alphanet",
+    "m3gnet": "m3gnet",
+    "eqv2_s_dens_mp": "equiformer_v2",
+    "eqv2_m_omat_salex_mp": "equiformer_v2",
+    "esen_30m_oam": "esen",
+    "esen_30m_mp": "esen",
+    "equiformer_v3_mp": "equiformer_v3",
+    "equiformer_v3_oam": "equiformer_v3",
+    "tace_v1_oam_m": "tace",
+    "tace_oam_rra_preview": "tace",
+    "tace_oam_l": "tace",
+    "tece_oam_rra_1_0": "tece",
+    "bam_mp_core": "bam",
+    "dpa_3_1_mptrj": "dpa",
+    "dpa_3_1_3m_ft": "dpa",
+    "dpa3_v2_mptrj": "dpa",
+    "dpa3_v2_openlam": "dpa",
+    "dpa3_v1_mptrj": "dpa",
+    "dpa3_v1_openlam": "dpa",
+    "dpa_4_0_pro_mptrj": "dpa",
+    "dpa_4_0_1_pro_mptrj": "dpa",
+    "equflash_29m_oam": "equflash",
+    "equflashv2_45m_oam": "equflash",
+}
+
 
 def discovery_blocked() -> bool:
     explicit = os.environ.get("MEMORY_PROFILE", "").strip().lower()
@@ -78,6 +136,40 @@ def discovery_blocked() -> bool:
     return os.environ.get("RENDER", "").strip().lower() in {"1", "true", "yes", "on"} or bool(
         os.environ.get("RENDER_SERVICE_ID")
     )
+
+
+def _package_importable(package: str) -> bool:
+    try:
+        return importlib.util.find_spec(package) is not None
+    except Exception:
+        return False
+
+
+def list_discovery_calculators() -> dict[str, Any]:
+    """Return registry keys and whether associated packages are importable.
+
+    Does not import matbench_discovery or torch. Safe without the discovery extra.
+    """
+    blocked = discovery_blocked()
+    models = {}
+    for key in DISCOVERY_MODELS:
+        pkg = _MODEL_PACKAGES.get(key)
+        importable = _package_importable(pkg) if pkg else False
+        models[key] = {
+            "registry_key": key,
+            "package": pkg,
+            "package_importable": importable,
+            "usable_on_this_host": importable and not blocked,
+            "source": "matbench_discovery.calculators",
+            "note": "blocked by Render memory profile" if blocked else ("package present" if importable else "package not installed"),
+        }
+    return {
+        "extra": "discovery",
+        "blocked_on_render": blocked,
+        "matbench_discovery_importable": _package_importable("matbench_discovery"),
+        "models": models,
+        "count": len(DISCOVERY_MODELS),
+    }
 
 
 def describe_discovery_models() -> dict[str, Any]:
