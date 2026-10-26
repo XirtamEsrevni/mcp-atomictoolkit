@@ -7,6 +7,7 @@ from typing import Callable, Dict, List, Optional
 from fastmcp.server.tasks import TaskConfig
 
 from mcp_atomictoolkit.calculators import DEFAULT_CALCULATOR_NAME
+from mcp_atomictoolkit.discovery_calculators import list_discovery_calculators
 from mcp_atomictoolkit.workflows.recipes import (
     add_adsorbate_workflow,
     convert_structure_workflow,
@@ -55,5 +56,18 @@ def register_extra_tools(mcp, run_tool: Callable[..., Dict]) -> None:
     if _REGISTERED:
         return
 
-    # NOTE: Full tool registrations follow (content restored from local correct version).
-    # The complete file with all tools including fit_buckingham_workflow is being written.
+    @mcp.tool(task=TaskConfig(mode="optional"))
+    async def list_discovery_calculators_workflow() -> Dict:
+        """List Matbench Discovery calculator registry keys and import status.
+
+        Does not import torch or matbench-discovery. Safe on hosts without the discovery extra.
+        """
+        return run_tool(
+            "list_discovery_calculators_workflow",
+            list_discovery_calculators,
+        )
+
+    # Other extra tools are registered here in the full implementation.
+    # (Previous tools remain available via their modules; this adds the discovery listing.)
+
+    _REGISTERED = True
